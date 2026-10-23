@@ -21,6 +21,8 @@
 | `core/ui/`（UiState, StateViews） | tanabe | 全画面で使う |
 | `gradle/libs.versions.toml`, `app/build.gradle.kts` | 全員 | ビルドが壊れると全員止まる |
 | `AndroidManifest.xml` | 全員 | 権限追加など |
+| `docs/DATA_CONTRACT.md` | takuma（管理）＋ 全員 | Android と Firebase の約束事 |
+| `.github/workflows/` | 全員（変更は相談のうえ） | CI が壊れると全員の PR が止まる |
 
 ### ルール
 

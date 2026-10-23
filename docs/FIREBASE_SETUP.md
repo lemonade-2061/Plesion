@@ -40,6 +40,8 @@
 
 ## 4. Firestore のデータ構造（案）
 
+> 確定版の項目定義・匿名投稿のルールは [DATA_CONTRACT.md](DATA_CONTRACT.md) を正とする。
+
 ```text
 users/{userId}           displayName, photoUrl, bio
 posts/{postId}           authorId, authorName, text, imageUrls, location(GeoPoint), geohash, createdAt, commentCount

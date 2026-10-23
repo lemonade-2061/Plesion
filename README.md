@@ -1,5 +1,7 @@
 # Plesion
 
+[![Android CI](https://github.com/lemonade-2061/Plesion/actions/workflows/android-ci.yml/badge.svg)](https://github.com/lemonade-2061/Plesion/actions/workflows/android-ci.yml)
+
 近くにいる人（半径1km以内）の投稿を見たり、自分の投稿を共有したりできる、位置情報ベースの Android 向け SNS アプリです。
 
 > **現在の状態:** 開発基盤のみ。画面は雛形で、データはすべて**仮データ（`[サンプル]` と表示）**です。Firebase には接続していません。
@@ -91,6 +93,7 @@ app/src/main/java/jp/plesion/app/
 - ブランチ名: `feature/<内容>`, `fix/<内容>`, `chore/<内容>`（例: `feature/home-timeline`）。
 - 1つの PR は小さく（目安 300 行以内）。1 PR = 1 つの目的。
 - PR を出す前に `./gradlew assembleDebug testDebugUnitTest` が通ることを確認する。
+- PR を作ると GitHub Actions（`.github/workflows/android-ci.yml`）が自動でビルド・テスト・Lint を実行する。**赤（失敗）のままマージしない。**
 - 作業前に `git pull origin main` で最新化し、こまめに main を取り込む。
 - `google-services.json`・API キー・署名鍵は**絶対にコミットしない**（`.gitignore` 済み）。
 
@@ -103,7 +106,7 @@ app/src/main/java/jp/plesion/app/
 - 画面遷移の追加
 - データモデル・Repository インターフェースの相談・調整
 
-Fake 実装は `data/local/` にあり、`di/AppContainer.kt` で本番実装に差し替えます。接続手順は [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)。
+Fake 実装は `data/local/` にあり、`di/AppContainer.kt` で本番実装に差し替えます。接続手順は [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)、Android と Firebase の約束事（投稿の項目・1km 検索の分担・匿名投稿）は [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md)。
 
 ## 未実装機能
 
