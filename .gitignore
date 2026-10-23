@@ -1,0 +1,17 @@
+# Gradle / Android Studio
+.gradle/
+build/
+/local.properties
+.idea/
+*.iml
+.DS_Store
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Firebase 設定ファイルと署名鍵はコミットしない（docs/FIREBASE_SETUP.md 参照）
+google-services.json
+*.jks
+*.keystore
+.env
