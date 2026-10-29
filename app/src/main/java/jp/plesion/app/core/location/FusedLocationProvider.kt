@@ -38,9 +38,10 @@ class FusedLocationProvider(
     override suspend fun getCurrentLocation(): Result<GeoPoint> {
         if (!hasPermission()) return Result.failure(LocationPermissionDeniedException())
         return runCatching {
+            // BALANCED だと GPS しか使えない環境（エミュレータ・Wi-Fi のない屋外）で null になる。1回きりの取得なので電池への影響は小さい
             val cancellation = CancellationTokenSource()
             val location = client()
-                .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellation.token)
+                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellation.token)
                 .await(cancellation)
                 ?: throw LocationUnavailableException()
             GeoPoint(location.latitude, location.longitude)
