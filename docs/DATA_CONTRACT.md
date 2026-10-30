@@ -18,10 +18,10 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 |---|---|---|---|---|
 | `authorId` | string | `authorId` | ○ | 投稿者の uid。**匿名投稿では空文字**（§4） |
 | `authorName` | string | `authorName` | ○ | 表示名。匿名投稿では `"匿名"` |
-| `isAnonymous` | bool | （未追加。必要になった PR で追加） | ○ | 匿名投稿か |
-| `text` | string | `text` | ○ | 本文。1〜500 文字（上限は tajima が UI で決定し、ここを更新） |
-| `imageUrls` | array\<string\> | `imageUrls` | − | Storage のダウンロード URL。最大 4 枚（案） |
-| `location` | geopoint | `location: GeoPoint?` | ○ | 投稿位置（§3 の丸め後の値） |
+| `isAnonymous` | bool | （未追加。匿名投稿 UI（#20）の PR で追加） | ○ | 匿名投稿か |
+| `text` | string | `text` | ○ | 本文。1〜500 文字 |
+| `imageUrls` | array\<string\> | `imageUrls` | − | Storage のダウンロード URL。最大 4 枚 |
+| `location` | geopoint | `location: GeoPoint?` | ○ | 投稿位置（§4 の丸め後の値）。Kotlin では null 可だが、`createPost` は null なら失敗を返す |
 | `geohash` | string | （remote 層のみ） | ○ | 1km 検索用。Android の画面側では使わない |
 | `createdAt` | timestamp | `createdAt: Long` | ○ | サーバー時刻（`FieldValue.serverTimestamp()`） |
 | `commentCount` | number | `commentCount` | ○ | 初期値 0 |
@@ -57,3 +57,4 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 | 日付 | 内容 |
 |---|---|
 | 2026-10-23 | 初版 |
+| 2026-10-30 | 本文の上限（500 文字）と画像の上限（4 枚）を確定。`location` は null 可の型のまま `createPost` で必須チェックすることに決定（#6） |
