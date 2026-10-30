@@ -4,8 +4,8 @@ import jp.plesion.app.data.model.GeoPoint
 
 /**
  * 現在地を取得する窓口。
- * TODO: Fused Location Provider（play-services-location）で実装する。
- * 実装時は ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION の権限リクエストも必要。
+ * 正確な位置（ACCESS_FINE_LOCATION）が必須。権限リクエストでは Android 12 以降の仕様に合わせて
+ * ACCESS_FINE_LOCATION と ACCESS_COARSE_LOCATION をまとめて要求する。
  */
 interface LocationProvider {
     suspend fun getCurrentLocation(): Result<GeoPoint>

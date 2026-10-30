@@ -12,7 +12,10 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import jp.plesion.app.data.model.GeoPoint
 import kotlinx.coroutines.tasks.await
 
-/** 位置の権限がないときに返す失敗。画面側はこれを見て「位置なし」で動作する。 */
+/**
+ * 正確な位置（FINE）の権限がないときに返す失敗。おおよその位置（COARSE）だけの場合も含む。
+ * 画面側はこれを見て閲覧・投稿を制限し、権限設定の案内を表示する。
+ */
 class LocationPermissionDeniedException : SecurityException("Location permission is not granted")
 
 /** 端末が現在地を返せなかったとき（位置情報 OFF など）の失敗。 */
@@ -20,7 +23,7 @@ class LocationUnavailableException : IllegalStateException("Current location is 
 
 /**
  * Fused Location Provider で現在地を取得する。
- * 権限のリクエストはしない（各画面の担当）。権限がなければ例外を投げずに Result.failure を返す。
+ * 権限のリクエストはしない（各画面の担当）。FINE の権限がなければ例外を投げずに Result.failure を返す。
  * 返す位置は丸めない。丸めは投稿の保存時に行う（docs/DATA_CONTRACT.md §4）。
  */
 class FusedLocationProvider(
@@ -49,8 +52,6 @@ class FusedLocationProvider(
     }
 }
 
-// おおよその位置（COARSE）だけ許可された場合も使う。1km 検索には十分な精度
+// おおよその位置（COARSE）は誤差が 1km 前後あり、1km 検索の精度を保証できないため FINE を必須にする
 private fun Context.hasLocationPermission(): Boolean =
-    listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION).any {
-        ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-    }
+    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
