@@ -2,7 +2,14 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    // Firebase 接続時に google-services プラグインを追加する（docs/FIREBASE_SETUP.md 参照）
+}
+
+// google-services.json はコミットしないため、CI や未配布の環境ではファイルがない。
+// ないときはプラグインを適用せずにビルドを通す（Firebase は使えない）。docs/FIREBASE_SETUP.md 参照
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+} else {
+    logger.warn("app/google-services.json がないため Firebase を無効にしてビルドします（docs/FIREBASE_SETUP.md 参照）")
 }
 
 android {
