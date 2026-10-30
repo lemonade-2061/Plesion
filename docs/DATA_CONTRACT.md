@@ -39,7 +39,8 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 | 結果の表示・「近くに投稿がない」表示 | tanabe | `feature/feed/` |
 
 - 画面と ViewModel は `getNearbyPosts(center)` を呼ぶだけ。geohash や距離計算を画面側に書かない。
-- 権限が拒否された場合は位置なしで動作する（エラー画面にしない）。表示文言は担当画面の人が決める。
+- 位置情報は必須。正確な位置（FINE）の権限がない場合（おおよその位置だけ許可された場合を含む）や現在地を取得できない場合は、閲覧・投稿を制限し、権限設定の案内を表示する。表示文言は担当画面の人が決める。
+- 権限リクエストでは ACCESS_FINE_LOCATION と ACCESS_COARSE_LOCATION をまとめて要求する（Android 12 以降の仕様）。
 
 ## 4. 匿名投稿時の情報保護
 
