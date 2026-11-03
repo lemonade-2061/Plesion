@@ -18,5 +18,9 @@ interface PostRepository {
 
     suspend fun deletePost(postId: String): Result<Unit>
 
+    /** 古い順。 */
     suspend fun getComments(postId: String): Result<List<Comment>>
+
+    /** 投稿者はログイン中のユーザー。投稿の commentCount も 1 増やす。 */
+    suspend fun addComment(postId: String, text: String): Result<Comment>
 }

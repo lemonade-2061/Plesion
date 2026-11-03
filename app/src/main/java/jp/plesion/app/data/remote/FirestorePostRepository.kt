@@ -53,6 +53,8 @@ class FirestorePostRepository(
     override suspend fun deletePost(postId: String): Result<Unit> = TODO()
 
     override suspend fun getComments(postId: String): Result<List<Comment>> = TODO()
+
+    override suspend fun addComment(postId: String, text: String): Result<Comment> = TODO()
 }
 
 /** geohash の範囲は円より広いので、距離で絞り込んで新しい順に並べる。位置のない投稿は除く。 */

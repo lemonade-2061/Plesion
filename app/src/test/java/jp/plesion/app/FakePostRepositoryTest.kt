@@ -31,6 +31,29 @@ class FakePostRepositoryTest {
     }
 
     @Test
+    fun addComment_addsCommentAndIncrementsCount() = runTest {
+        val repository = FakePostRepository()
+        val post = SampleData.posts.first()
+
+        val created = repository.addComment(post.id, "hello").getOrThrow()
+
+        assertTrue(created.id.startsWith(SampleData.ID_PREFIX))
+        assertTrue(created.text.startsWith(SampleData.TEXT_PREFIX))
+        assertEquals(created, repository.getComments(post.id).getOrThrow().last())
+        assertEquals(post.commentCount + 1, repository.getPost(post.id).getOrThrow().commentCount)
+    }
+
+    @Test
+    fun addComment_failsWhenBlank() = runTest {
+        assertTrue(FakePostRepository().addComment(SampleData.posts.first().id, "  ").isFailure)
+    }
+
+    @Test
+    fun addComment_failsWhenPostNotFound() = runTest {
+        assertTrue(FakePostRepository().addComment("missing", "hello").isFailure)
+    }
+
+    @Test
     fun sampleData_isClearlyMarked() {
         assertTrue(SampleData.posts.all { it.id.startsWith(SampleData.ID_PREFIX) })
         assertTrue(SampleData.posts.all { it.text.startsWith(SampleData.TEXT_PREFIX) })

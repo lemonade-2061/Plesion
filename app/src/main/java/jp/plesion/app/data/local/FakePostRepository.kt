@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 /** 【仮実装】メモリ上だけで動く。アプリを再起動すると作成した投稿は消える。 */
 class FakePostRepository : PostRepository {
     private val posts = MutableStateFlow(SampleData.posts)
+    private val comments = MutableStateFlow(SampleData.comments)
 
     override fun observeTimeline(): Flow<List<Post>> =
         posts.map { list -> list.sortedByDescending { it.createdAt } }
@@ -45,5 +46,25 @@ class FakePostRepository : PostRepository {
     }
 
     override suspend fun getComments(postId: String): Result<List<Comment>> =
-        Result.success(SampleData.comments.filter { it.postId == postId })
+        Result.success(comments.value.filter { it.postId == postId }.sortedBy { it.createdAt })
+
+    override suspend fun addComment(postId: String, text: String): Result<Comment> {
+        if (text.isBlank()) return Result.failure(IllegalArgumentException("Comment text is blank"))
+        if (posts.value.none { it.id == postId }) {
+            return Result.failure(NoSuchElementException("Post not found: $postId"))
+        }
+        val comment = Comment(
+            id = "${SampleData.ID_PREFIX}comment-${System.currentTimeMillis()}",
+            postId = postId,
+            authorId = SampleData.me.id,
+            authorName = SampleData.me.displayName,
+            text = "${SampleData.TEXT_PREFIX} $text",
+            createdAt = System.currentTimeMillis(),
+        )
+        comments.value = comments.value + comment
+        posts.value = posts.value.map {
+            if (it.id == postId) it.copy(commentCount = it.commentCount + 1) else it
+        }
+        return Result.success(comment)
+    }
 }
