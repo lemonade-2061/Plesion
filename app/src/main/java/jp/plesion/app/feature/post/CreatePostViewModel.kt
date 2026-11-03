@@ -2,6 +2,8 @@ package jp.plesion.app.feature.post
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import jp.plesion.app.core.location.LocationProvider
+import jp.plesion.app.core.location.toLocationErrorMessage
 import jp.plesion.app.data.repository.PostRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,11 +14,15 @@ import kotlinx.coroutines.launch
 data class CreatePostUiState(
     val text: String = "",
     val isSubmitting: Boolean = false,
+    val isLocating: Boolean = false,
     val isPosted: Boolean = false,
     val errorMessage: String? = null,
 )
 
-class CreatePostViewModel(private val postRepository: PostRepository) : ViewModel() {
+class CreatePostViewModel(
+    private val postRepository: PostRepository,
+    private val locationProvider: LocationProvider,
+) : ViewModel() {
     private val _uiState = MutableStateFlow(CreatePostUiState())
     val uiState: StateFlow<CreatePostUiState> = _uiState.asStateFlow()
 
@@ -24,15 +30,30 @@ class CreatePostViewModel(private val postRepository: PostRepository) : ViewMode
         _uiState.update { it.copy(text = text, errorMessage = null) }
     }
 
-    // TODO(tajima): 画像添付・位置情報の付与を追加する
+    // TODO(tajima): 画像添付を追加する
     fun submit() {
+        // 連打で二重投稿しないよう、送信中は受け付けない
+        if (_uiState.value.isSubmitting) return
+        _uiState.update { it.copy(isSubmitting = true, isLocating = true, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
-            postRepository.createPost(_uiState.value.text, location = null)
+            // 位置の丸め・geohash は Repository の責務なので、ここでは取得した現在地をそのまま渡す
+            val location = locationProvider.getCurrentLocation().getOrElse { e ->
+                _uiState.update {
+                    it.copy(isSubmitting = false, isLocating = false, errorMessage = e.toLocationErrorMessage())
+                }
+                return@launch
+            }
+            _uiState.update { it.copy(isLocating = false) }
+            postRepository.createPost(_uiState.value.text, location)
                 .onSuccess { _uiState.update { it.copy(isSubmitting = false, isPosted = true) } }
                 .onFailure { e ->
                     _uiState.update { it.copy(isSubmitting = false, errorMessage = e.message) }
                 }
         }
+    }
+
+    /** 投稿後にホームへ戻った後、タブで再び開いたときに前の入力や完了状態が残らないようにする。 */
+    fun onPostedHandled() {
+        _uiState.value = CreatePostUiState()
     }
 }

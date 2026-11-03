@@ -3,10 +3,12 @@ package jp.plesion.app.data.local
 import jp.plesion.app.data.model.Comment
 import jp.plesion.app.data.model.GeoPoint
 import jp.plesion.app.data.model.Post
+import jp.plesion.app.data.remote.filterNearby
 import jp.plesion.app.data.repository.PostRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 /** 【仮実装】メモリ上だけで動く。アプリを再起動すると作成した投稿は消える。 */
 class FakePostRepository : PostRepository {
@@ -16,9 +18,9 @@ class FakePostRepository : PostRepository {
     override fun observeTimeline(): Flow<List<Post>> =
         posts.map { list -> list.sortedByDescending { it.createdAt } }
 
-    // 距離計算はしない。位置検索の本実装は remote 層で行う。
+    // 画面の動作確認用に、Firestore 実装と同じ絞り込み（距離・位置なし除外・新しい順）だけ再現する
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> =
-        Result.success(posts.value)
+        Result.success(filterNearby(posts.value, center, radiusMeters))
 
     override suspend fun getPost(postId: String): Result<Post> {
         val post = posts.value.find { it.id == postId }
@@ -29,7 +31,7 @@ class FakePostRepository : PostRepository {
     override suspend fun createPost(text: String, location: GeoPoint?): Result<Post> {
         if (text.isBlank()) return Result.failure(IllegalArgumentException("Post text is blank"))
         val post = Post(
-            id = "${SampleData.ID_PREFIX}post-${System.currentTimeMillis()}",
+            id = "${SampleData.ID_PREFIX}post-${UUID.randomUUID()}",
             authorId = SampleData.me.id,
             authorName = SampleData.me.displayName,
             text = "${SampleData.TEXT_PREFIX} $text",
@@ -54,7 +56,7 @@ class FakePostRepository : PostRepository {
             return Result.failure(NoSuchElementException("Post not found: $postId"))
         }
         val comment = Comment(
-            id = "${SampleData.ID_PREFIX}comment-${System.currentTimeMillis()}",
+            id = "${SampleData.ID_PREFIX}comment-${UUID.randomUUID()}",
             postId = postId,
             authorId = SampleData.me.id,
             authorName = SampleData.me.displayName,

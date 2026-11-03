@@ -58,4 +58,19 @@ class FakePostRepositoryTest {
         assertTrue(SampleData.posts.all { it.id.startsWith(SampleData.ID_PREFIX) })
         assertTrue(SampleData.posts.all { it.text.startsWith(SampleData.TEXT_PREFIX) })
     }
+
+    @Test
+    fun createPost_twiceInSameMillisecond_hasUniqueIds() = runTest {
+        val repository = FakePostRepository()
+        val ids = List(50) { repository.createPost("hello", location = null).getOrThrow().id }
+        assertEquals(ids.size, ids.toSet().size)
+    }
+
+    @Test
+    fun addComment_twiceInSameMillisecond_hasUniqueIds() = runTest {
+        val repository = FakePostRepository()
+        val postId = SampleData.posts.first().id
+        val ids = List(50) { repository.addComment(postId, "hello").getOrThrow().id }
+        assertEquals(ids.size, ids.toSet().size)
+    }
 }
