@@ -18,8 +18,10 @@ class TestLocationProvider(var result: Result<GeoPoint> = Result.success(TOKYO_S
 
     override suspend fun getCurrentLocation(): Result<GeoPoint> {
         calls++
+        // 実機と同じく「呼ばれた時点の位置」を返す（待機中に result を変えても反映しない）
+        val snapshot = result
         gate?.await()
-        return result
+        return snapshot
     }
 }
 
@@ -32,11 +34,15 @@ class TestPostRepository(
     var commentsFailure: Throwable? = null
     val nearbyCenters = mutableListOf<Pair<GeoPoint, Double>>()
     val createdLocations = mutableListOf<GeoPoint?>()
+    /** null 以外なら、検索時点の結果を返す前に完了を待つ（通信中に投稿が増えた状況を作るため）。 */
+    var nearbyGate: CompletableDeferred<Unit>? = null
 
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> {
         nearbyCenters += center to radiusMeters
         nearbyFailure?.let { return Result.failure(it) }
-        return delegate.getNearbyPosts(center, radiusMeters)
+        val snapshot = delegate.getNearbyPosts(center, radiusMeters)
+        nearbyGate?.await()
+        return snapshot
     }
 
     override suspend fun getPost(postId: String): Result<Post> {

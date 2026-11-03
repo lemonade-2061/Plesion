@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import jp.plesion.app.core.ui.LocationPermissionGate
 import jp.plesion.app.di.AppContainer
 import jp.plesion.app.feature.auth.LoginScreen
 import jp.plesion.app.feature.auth.LoginViewModel
@@ -98,12 +99,15 @@ fun PlesionNavHost(
                 arguments = listOf(navArgument(Routes.POST_DETAIL_ARG) { type = NavType.StringType }),
             ) { entry ->
                 val postId = entry.arguments?.getString(Routes.POST_DETAIL_ARG).orEmpty()
-                PostDetailScreen(
-                    viewModel = viewModel(factory = viewModelFactory {
-                        initializer { PostDetailViewModel(postId, container.postRepository) }
-                    }),
-                    onBack = { if (entry.isResumed()) navController.popBackStack() },
-                )
+                // 権限取り消し後もナビゲーション状態の復元で詳細が開き直されるため、ここでも位置情報必須を守る
+                LocationPermissionGate {
+                    PostDetailScreen(
+                        viewModel = viewModel(factory = viewModelFactory {
+                            initializer { PostDetailViewModel(postId, container.postRepository) }
+                        }),
+                        onBack = { if (entry.isResumed()) navController.popBackStack() },
+                    )
+                }
             }
             composable(Routes.CREATE_POST) {
                 CreatePostScreen(

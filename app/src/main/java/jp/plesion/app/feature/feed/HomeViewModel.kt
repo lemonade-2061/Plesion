@@ -27,17 +27,25 @@ class HomeViewModel(
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     private var loadJob: Job? = null
+    private var rerunRequested = false
 
     /**
-     * 現在地を取り直して周辺の投稿を読み込む。取得中に呼ばれても重ねて実行しない。
+     * 現在地を取り直して周辺の投稿を読み込む。取得中に呼ばれても並行しては実行しない。
+     * ただし取得中の要求は捨てず、終わった後に 1 回だけ取り直す（取得中の投稿完了・移動を取りこぼさないため）。
      * 一覧を表示済みなら、更新中も前の一覧を残す（詳細から戻ったときなどに画面が消えないように）。
      */
     fun refresh() {
-        if (loadJob?.isActive == true) return
+        if (loadJob?.isActive == true) {
+            rerunRequested = true
+            return
+        }
         loadJob = viewModelScope.launch {
             if (_uiState.value !is UiState.Success) _uiState.value = UiState.Loading
             _isRefreshing.value = true
-            _uiState.value = loadNearbyPosts()
+            do {
+                rerunRequested = false
+                _uiState.value = loadNearbyPosts()
+            } while (rerunRequested)
             _isRefreshing.value = false
         }
     }

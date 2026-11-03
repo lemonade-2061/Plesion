@@ -123,7 +123,7 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun refresh_whileLoading_doesNotStartSecondRequest() {
+    fun refresh_whileLoading_doesNotRunInParallel_andCoalescesIntoOneRerun() {
         val location = TestLocationProvider().apply { gate = CompletableDeferred() }
         val viewModel = HomeViewModel(TestPostRepository(), location)
 
@@ -131,10 +131,41 @@ class HomeViewModelTest {
         viewModel.refresh()
         viewModel.refresh()
         assertTrue(viewModel.isRefreshing.value)
+        assertEquals(1, location.calls)
         location.gate?.complete(Unit)
 
-        assertEquals(1, location.calls)
+        // 取得中の要求は捨てずに、終わった後に 1 回だけまとめて取り直す
+        assertEquals(2, location.calls)
         assertTrue(!viewModel.isRefreshing.value)
+    }
+
+    @Test
+    fun refresh_postCreatedDuringLoading_isShownAfterRerun() = runTest {
+        val repository = TestPostRepository().apply { nearbyGate = CompletableDeferred() }
+        val viewModel = HomeViewModel(repository, TestLocationProvider())
+        viewModel.refresh()
+
+        // 取得中に投稿が完了し、ホーム復帰で refresh が呼ばれる
+        val created = repository.createPost("new", TOKYO_STATION).getOrThrow()
+        viewModel.refresh()
+        repository.nearbyGate?.complete(Unit)
+
+        assertEquals(created.id, viewModel.posts().first().id)
+    }
+
+    @Test
+    fun refresh_locationChangedDuringLoading_usesNewLocation() {
+        val repository = TestPostRepository()
+        val location = TestLocationProvider().apply { gate = CompletableDeferred() }
+        val viewModel = HomeViewModel(repository, location)
+        viewModel.refresh()
+
+        location.result = Result.success(GeoPoint(43.0, 141.0))
+        viewModel.refresh()
+        location.gate?.complete(Unit)
+
+        assertEquals(GeoPoint(43.0, 141.0), repository.nearbyCenters.last().first)
+        assertEquals(emptyList<Post>(), viewModel.posts())
     }
 
     @Test

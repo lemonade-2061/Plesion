@@ -8,6 +8,7 @@ import jp.plesion.app.data.repository.PostRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 /** 【仮実装】メモリ上だけで動く。アプリを再起動すると作成した投稿は消える。 */
 class FakePostRepository : PostRepository {
@@ -30,7 +31,7 @@ class FakePostRepository : PostRepository {
     override suspend fun createPost(text: String, location: GeoPoint?): Result<Post> {
         if (text.isBlank()) return Result.failure(IllegalArgumentException("Post text is blank"))
         val post = Post(
-            id = "${SampleData.ID_PREFIX}post-${System.currentTimeMillis()}",
+            id = "${SampleData.ID_PREFIX}post-${UUID.randomUUID()}",
             authorId = SampleData.me.id,
             authorName = SampleData.me.displayName,
             text = "${SampleData.TEXT_PREFIX} $text",
@@ -55,7 +56,7 @@ class FakePostRepository : PostRepository {
             return Result.failure(NoSuchElementException("Post not found: $postId"))
         }
         val comment = Comment(
-            id = "${SampleData.ID_PREFIX}comment-${System.currentTimeMillis()}",
+            id = "${SampleData.ID_PREFIX}comment-${UUID.randomUUID()}",
             postId = postId,
             authorId = SampleData.me.id,
             authorName = SampleData.me.displayName,
