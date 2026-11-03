@@ -13,17 +13,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import jp.plesion.app.data.repository.GoogleIdTokenProvider
 
 // TODO(tajima): Google ログインボタンのデザインと文言を実装する
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
+    googleIdTokenProvider: GoogleIdTokenProvider,
     onSignedIn: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(state.isSignedIn) {
         if (state.isSignedIn) onSignedIn()
@@ -38,8 +42,8 @@ fun LoginScreen(
         if (state.isLoading) {
             CircularProgressIndicator()
         } else {
-            Button(onClick = viewModel::signInWithSampleUser) {
-                Text("サンプルユーザーでログイン（仮）")
+            Button(onClick = { viewModel.signIn { googleIdTokenProvider.getIdToken(context) } }) {
+                Text("Google でログイン")
             }
         }
         state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
