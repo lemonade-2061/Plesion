@@ -5,6 +5,10 @@
         位置情報・通知・インターネット等のパーミッションは、その機能を実装する PR で追加する。
         今は使わない権限を宣言しない。
     -->
+    <!-- 現在地の取得（core/location/FusedLocationProvider）。権限リクエストの UI は各画面で行う -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <application
         android:name=".PlesionApplication"
         android:allowBackup="false"
