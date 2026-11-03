@@ -6,16 +6,38 @@
 
 1. [Firebase コンソール](https://console.firebase.google.com/) でプロジェクトを作成。
 2. Android アプリを追加。パッケージ名: `jp.plesion.app`。
-3. Google ログインのため、デバッグ用 SHA-1 を登録:
+3. Google ログインのため、**メンバー全員**のデバッグ用 SHA-1 を登録（§1.1）。
+4. 全員分の SHA-1 を登録してから `google-services.json` をダウンロードし、`app/` に置く。
+   - **このファイルはコミットしない**（`.gitignore` 済み）。メンバーへの共有は §1.2 の方法で行う。
+   - SHA-1 を後から追加した場合は、ダウンロードし直して共有し直す。
+
+### 1.1 SHA-1 の登録
+
+デバッグビルドの署名鍵（`~/.android/debug.keystore`）は PC ごとに違うため、**PC ごとに** SHA-1 の登録が必要。
+登録されていない PC でビルドしたアプリは、Google ログインだけが失敗する（`DEVELOPER_ERROR` など）。
+
+1. 各メンバーが、プロジェクトのフォルダで次のコマンドを実行する。
    ```bash
    ./gradlew signingReport
    ```
-4. `google-services.json` をダウンロードし `app/` に置く。
-   - **このファイルはコミットしない**（`.gitignore` 済み）。メンバーにはチャット等の安全な経路で共有する。
+2. 出力の `Variant: debug` にある `SHA1:` の値を takuma に送る（SHA-1 は秘密情報ではない）。
+3. takuma が Firebase コンソールの「プロジェクトの設定 → マイアプリ → フィンガープリントを追加」で登録する。
+
+PC の買い替えなどで `debug.keystore` が作り直されたときは、SHA-1 が変わるので登録し直す。
+
+### 1.2 `google-services.json` の共有
+
+- takuma がチームの**非公開の**チャットで、ファイルを直接送る。
+- リポジトリ・Issue・PR・公開の場所には置かない。
+- 受け取ったら `app/google-services.json` に置き、Gradle Sync する。
+  ビルドのログに「`app/google-services.json がないため Firebase を無効にしてビルドします`」が出なければ配置できている。
 
 ## 2. Gradle への追加
 
-`gradle/libs.versions.toml` に Firebase BoM・google-services プラグインを追加し、`app/build.gradle.kts` の `plugins` と `dependencies` に追記する。
+google-services プラグインは追加済み（`gradle/libs.versions.toml` の `googleServices`）。
+`app/google-services.json` があるときだけ適用するので、ファイルがない環境（CI など）でもビルドは通る。その場合 Firebase は使えない。
+
+ライブラリは使う PR で `gradle/libs.versions.toml` に Firebase BoM 経由で追加し、`app/build.gradle.kts` の `dependencies` に追記する。
 バージョンは追加時点の [公式リリースノート](https://firebase.google.com/support/release-notes/android) で確認すること（推測で書かない）。
 
 使う予定のライブラリ:
