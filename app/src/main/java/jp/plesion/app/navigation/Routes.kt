@@ -7,4 +7,8 @@ object Routes {
     const val CREATE_POST = "create_post"
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
+    const val POST_DETAIL_ARG = "postId"
+    const val POST_DETAIL = "post/{$POST_DETAIL_ARG}"
+
+    fun postDetail(postId: String) = "post/${android.net.Uri.encode(postId)}"
 }

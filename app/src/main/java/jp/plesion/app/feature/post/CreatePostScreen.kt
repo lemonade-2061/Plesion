@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import jp.plesion.app.core.ui.LocationPermissionGate
 
 // TODO(tajima): 投稿作成画面の本実装（画像添付・文字数制限など）
 @Composable
@@ -26,22 +27,29 @@ fun CreatePostScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.isPosted) {
-        if (state.isPosted) onPosted()
+        if (state.isPosted) {
+            viewModel.onPostedHandled()
+            onPosted()
+        }
     }
 
-    Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        OutlinedTextField(
-            value = state.text,
-            onValueChange = viewModel::onTextChange,
-            label = { Text("いまどうしてる？") },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Button(onClick = viewModel::submit, enabled = !state.isSubmitting) {
-            Text("投稿する（仮データに追加）")
+    // 正確な位置情報がないと投稿できないため、許可されるまでは入力欄の代わりに案内を出す
+    LocationPermissionGate(modifier = modifier) {
+        Column(
+            modifier = modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedTextField(
+                value = state.text,
+                onValueChange = viewModel::onTextChange,
+                label = { Text("いまどうしてる？") },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (state.isLocating) Text("現在地を取得しています…")
+            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            Button(onClick = viewModel::submit, enabled = !state.isSubmitting) {
+                Text("投稿する（仮データに追加）")
+            }
         }
     }
 }

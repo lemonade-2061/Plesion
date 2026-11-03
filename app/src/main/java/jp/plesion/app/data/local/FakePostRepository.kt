@@ -3,6 +3,7 @@ package jp.plesion.app.data.local
 import jp.plesion.app.data.model.Comment
 import jp.plesion.app.data.model.GeoPoint
 import jp.plesion.app.data.model.Post
+import jp.plesion.app.data.remote.filterNearby
 import jp.plesion.app.data.repository.PostRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,9 +17,9 @@ class FakePostRepository : PostRepository {
     override fun observeTimeline(): Flow<List<Post>> =
         posts.map { list -> list.sortedByDescending { it.createdAt } }
 
-    // 距離計算はしない。位置検索の本実装は remote 層で行う。
+    // 画面の動作確認用に、Firestore 実装と同じ絞り込み（距離・位置なし除外・新しい順）だけ再現する
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> =
-        Result.success(posts.value)
+        Result.success(filterNearby(posts.value, center, radiusMeters))
 
     override suspend fun getPost(postId: String): Result<Post> {
         val post = posts.value.find { it.id == postId }

@@ -8,19 +8,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import jp.plesion.app.di.AppContainer
 import jp.plesion.app.feature.auth.LoginScreen
 import jp.plesion.app.feature.auth.LoginViewModel
 import jp.plesion.app.feature.feed.HomeScreen
 import jp.plesion.app.feature.feed.HomeViewModel
+import jp.plesion.app.feature.feed.detail.PostDetailScreen
+import jp.plesion.app.feature.feed.detail.PostDetailViewModel
 import jp.plesion.app.feature.post.CreatePostScreen
 import jp.plesion.app.feature.post.CreatePostViewModel
 import jp.plesion.app.feature.profile.ProfileScreen
@@ -76,17 +82,33 @@ fun PlesionNavHost(
                     },
                 )
             }
-            composable(Routes.HOME) {
+            composable(Routes.HOME) { entry ->
                 HomeScreen(
                     viewModel = viewModel(factory = viewModelFactory {
-                        initializer { HomeViewModel(container.postRepository) }
+                        initializer { HomeViewModel(container.postRepository, container.locationProvider) }
                     }),
+                    onPostClick = { postId ->
+                        // 連打や遷移アニメーション中のタップで詳細が二重に積まれないようにする
+                        if (entry.isResumed()) navController.navigate(Routes.postDetail(postId))
+                    },
+                )
+            }
+            composable(
+                route = Routes.POST_DETAIL,
+                arguments = listOf(navArgument(Routes.POST_DETAIL_ARG) { type = NavType.StringType }),
+            ) { entry ->
+                val postId = entry.arguments?.getString(Routes.POST_DETAIL_ARG).orEmpty()
+                PostDetailScreen(
+                    viewModel = viewModel(factory = viewModelFactory {
+                        initializer { PostDetailViewModel(postId, container.postRepository) }
+                    }),
+                    onBack = { if (entry.isResumed()) navController.popBackStack() },
                 )
             }
             composable(Routes.CREATE_POST) {
                 CreatePostScreen(
                     viewModel = viewModel(factory = viewModelFactory {
-                        initializer { CreatePostViewModel(container.postRepository) }
+                        initializer { CreatePostViewModel(container.postRepository, container.locationProvider) }
                     }),
                     onPosted = { navController.navigateToTab(Routes.HOME) },
                 )
@@ -114,3 +136,6 @@ private fun NavHostController.navigateToTab(route: String) {
         restoreState = true
     }
 }
+
+private fun NavBackStackEntry.isResumed(): Boolean =
+    lifecycle.currentState == Lifecycle.State.RESUMED
