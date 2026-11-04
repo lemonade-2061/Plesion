@@ -121,7 +121,7 @@ fun PlesionNavHost(
             composable(Routes.PROFILE) {
                 ProfileScreen(
                     viewModel = viewModel(factory = viewModelFactory {
-                        initializer { ProfileViewModel(container.userRepository) }
+                        initializer { ProfileViewModel(container.userRepository, container.authRepository) }
                     }),
                     onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 )
