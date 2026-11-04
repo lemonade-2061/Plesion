@@ -10,6 +10,8 @@ import jp.plesion.app.data.local.FakePostRepository
 import jp.plesion.app.data.local.FakeUserRepository
 import jp.plesion.app.data.remote.CredentialManagerGoogleIdTokenProvider
 import jp.plesion.app.data.remote.FirebaseAuthRepository
+import jp.plesion.app.data.remote.FirestorePostRepository
+import jp.plesion.app.data.remote.FirestoreUserRepository
 import jp.plesion.app.data.repository.AuthRepository
 import jp.plesion.app.data.repository.GoogleIdTokenProvider
 import jp.plesion.app.data.repository.PostRepository
@@ -18,19 +20,22 @@ import jp.plesion.app.data.repository.UserRepository
 /**
  * 手動 DI のコンテナ。画面は具体クラスではなく Repository インターフェースだけを知る。
  *
- * Firebase 実装ができたら、ここの Fake* を Firestore* 等に差し替えるだけで
- * 画面側のコードを変えずに本番データへ切り替えられる。
+ * google-services.json があれば Firebase の本番実装、なければ Fake（仮データ）を使う。
+ * 画面側のコードはどちらでも変わらない。
  */
 class AppContainer(context: Context) {
     // google-services.json がない環境（CI など）では Fake のまま動かす
     private val webClientId: String? = context.googleWebClientId()
+    private val useFirebase = webClientId != null
 
     val authRepository: AuthRepository =
-        if (webClientId != null) FirebaseAuthRepository() else FakeAuthRepository()
+        if (useFirebase) FirebaseAuthRepository() else FakeAuthRepository()
     val googleIdTokenProvider: GoogleIdTokenProvider =
         if (webClientId != null) CredentialManagerGoogleIdTokenProvider(webClientId) else FakeGoogleIdTokenProvider()
-    val userRepository: UserRepository = FakeUserRepository()
-    val postRepository: PostRepository = FakePostRepository()
+    val userRepository: UserRepository =
+        if (useFirebase) FirestoreUserRepository() else FakeUserRepository()
+    val postRepository: PostRepository =
+        if (useFirebase) FirestorePostRepository() else FakePostRepository()
 
     /** 権限がなければ Result.failure を返す。権限リクエストは各画面で行う。 */
     val locationProvider: LocationProvider = FusedLocationProvider(context.applicationContext)
