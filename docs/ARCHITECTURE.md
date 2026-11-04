@@ -7,7 +7,7 @@ Screen (Composable) ──observe──▶ ViewModel ──call──▶ Reposit
         ▲                          │                       │
         └──── UiState (StateFlow) ─┘          ┌────────────┴────────────┐
                                               │                         │
-                                     data/local/Fake*        data/remote/Firestore*（予定）
+                                     data/local/Fake*        data/remote/Firestore*
 ```
 
 - **Screen**: 状態を表示し、ユーザー操作を ViewModel に伝えるだけ。ロジックを書かない。

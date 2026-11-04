@@ -1,6 +1,7 @@
 # Firebase 導入手順（担当: takuma）
 
-> 現在は**未接続**です。アプリは `data/local/` の Fake 実装で動いています。
+> `app/google-services.json` があれば Firebase（認証・Firestore）に接続し、なければ `data/local/` の Fake 実装（仮データ）で動きます。
+> 接続すると本番のデータを読み書きするので、先にセキュリティルールを反映しておくこと（§6）。
 
 ## 1. Firebase プロジェクトの作成
 
@@ -31,7 +32,7 @@ PC の買い替えなどで `debug.keystore` が作り直されたときは、SH
 - リポジトリ・Issue・PR・公開の場所には置かない。
 - 受け取ったら `app/google-services.json` に置き、Gradle Sync する。
   ビルドのログに「`app/google-services.json がないため Firebase を無効にしてビルドします`」が出なければ配置できている。
-- 認証は、ファイルに Web クライアント ID（Authentication で Google を有効にすると入る）があるときだけ Firebase を使い、なければ Fake で動く。
+- 認証・投稿・ユーザーは、ファイルに Web クライアント ID（Authentication で Google を有効にすると入る）があるときだけ Firebase を使い、なければ Fake で動く。
   ログイン画面でアカウント選択が出ないときは、Google を有効にしてからダウンロードし直す。
 
 ## 2. Gradle への追加
@@ -54,13 +55,13 @@ google-services プラグインは追加済み（`gradle/libs.versions.toml` の
 
 | 何を | どこに | 置き換える Fake |
 |---|---|---|
-| 認証 | `data/remote/FirebaseAuthRepository.kt`（新規） | `FakeAuthRepository` |
-| ユーザー | `data/remote/FirestoreUserRepository.kt`（新規） | `FakeUserRepository` |
-| 投稿・コメント | `data/remote/FirestorePostRepository.kt`（新規） | `FakePostRepository` |
+| 認証 | `data/remote/FirebaseAuthRepository.kt` | `FakeAuthRepository` |
+| ユーザー | `data/remote/FirestoreUserRepository.kt` | `FakeUserRepository` |
+| 投稿・コメント | `data/remote/FirestorePostRepository.kt` | `FakePostRepository` |
 | 位置情報 | `core/location/FusedLocationProvider.kt`（新規） | `LocationProvider` の実装 |
 | 差し替え | `di/AppContainer.kt` | — |
 
-`AppContainer` で Fake ↔ 本番を切り替える。Firebase 側の準備が整うまで画面チームは Fake で開発を続けられる。
+`AppContainer` で Fake ↔ 本番を切り替える（`google-services.json` の有無で自動）。仮データで画面を確認したいときは、`app/google-services.json` を一時的に別の場所へ移してビルドする。
 
 ## 4. Firestore のデータ構造（案）
 
