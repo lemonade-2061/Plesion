@@ -1,0 +1,84 @@
+rules_version = '2';
+
+// Firestore のセキュリティルール。項目の定義は docs/DATA_CONTRACT.md を正とする。
+// 変更したら firestore-tests/ のテストを Emulator で通してから反映する（docs/FIREBASE_SETUP.md §6）。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isText(value, maxLength) {
+      return value is string && value.trim().size() > 0 && value.size() <= maxLength;
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+
+      // 本人の名前でだけ作れる。createdAt はサーバー時刻、commentCount は 0 から
+      // TODO(takuma): 匿名投稿（#20）の isAnonymous と private/owner は、その PR で追加する
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+          ['authorId', 'authorName', 'text', 'imageUrls', 'location', 'geohash', 'createdAt', 'commentCount'])
+        && request.resource.data.keys().hasAll(
+          ['authorId', 'authorName', 'text', 'location', 'geohash', 'createdAt', 'commentCount'])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.authorName is string
+        && isText(request.resource.data.text, 500)
+        && (!('imageUrls' in request.resource.data)
+          || (request.resource.data.imageUrls is list && request.resource.data.imageUrls.size() <= 4))
+        && request.resource.data.location is latlng
+        && request.resource.data.geohash is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.commentCount == 0;
+
+      // 本文などの編集はまだない（#16）。コメント追加時の commentCount + 1 だけ認める
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
+        && request.resource.data.commentCount == resource.data.commentCount + 1;
+
+      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+
+        // 投稿の commentCount を同じバッチで 1 増やしたときだけ作れる（件数がずれないように）
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'text', 'createdAt'])
+          && request.resource.data.keys().hasAll(['authorId', 'authorName', 'text', 'createdAt'])
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && isText(request.resource.data.text, 500)
+          && request.resource.data.createdAt == request.time
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && getAfter(/databases/$(database)/documents/posts/$(postId)).data.commentCount
+            == get(/databases/$(database)/documents/posts/$(postId)).data.commentCount + 1;
+
+        allow update: if false;
+
+        // 投稿の削除時に、投稿者がコメントもまとめて消す
+        allow delete: if signedIn()
+          && get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid;
+      }
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['displayName', 'photoUrl', 'bio'])
+        && request.resource.data.keys().hasAll(['displayName', 'bio'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 50
+        && (!('photoUrl' in request.resource.data)
+          || request.resource.data.photoUrl == null
+          || request.resource.data.photoUrl is string)
+        && request.resource.data.bio is string
+        && request.resource.data.bio.size() <= 200;
+
+      allow delete: if false;
+    }
+  }
+}
