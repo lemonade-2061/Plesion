@@ -2,7 +2,7 @@
 # 更新する場合は PR で理由を書き、assembleDebug / testDebugUnitTest が通ることを確認すること。
 [versions]
 agp = "8.13.2"
-kotlin = "2.2.21"
+kotlin = "2.3.21"
 googleServices = "4.5.0"
 coreKtx = "1.17.0"
 activityCompose = "1.11.0"
