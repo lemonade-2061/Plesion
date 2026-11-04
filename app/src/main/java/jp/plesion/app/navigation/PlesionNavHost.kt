@@ -76,6 +76,7 @@ fun PlesionNavHost(
                     viewModel = viewModel(factory = viewModelFactory {
                         initializer { LoginViewModel(container.authRepository) }
                     }),
+                    googleIdTokenProvider = container.googleIdTokenProvider,
                     onSignedIn = {
                         navController.navigate(Routes.HOME) {
                             popUpTo(Routes.LOGIN) { inclusive = true }

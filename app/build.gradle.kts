@@ -63,7 +63,11 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.geofire.android.common)
     implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.play.services.location)
 

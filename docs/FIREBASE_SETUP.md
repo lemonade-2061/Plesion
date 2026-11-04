@@ -31,6 +31,8 @@ PC の買い替えなどで `debug.keystore` が作り直されたときは、SH
 - リポジトリ・Issue・PR・公開の場所には置かない。
 - 受け取ったら `app/google-services.json` に置き、Gradle Sync する。
   ビルドのログに「`app/google-services.json がないため Firebase を無効にしてビルドします`」が出なければ配置できている。
+- 認証は、ファイルに Web クライアント ID（Authentication で Google を有効にすると入る）があるときだけ Firebase を使い、なければ Fake で動く。
+  ログイン画面でアカウント選択が出ないときは、Google を有効にしてからダウンロードし直す。
 
 ## 2. Gradle への追加
 
