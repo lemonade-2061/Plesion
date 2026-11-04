@@ -112,9 +112,44 @@ class FirestorePostRepository(
         }.commit().await()
     }
 
-    override suspend fun getComments(postId: String): Result<List<Comment>> = TODO()
+    override suspend fun getComments(postId: String): Result<List<Comment>> = runCatching {
+        posts.document(postId).collection("comments")
+            .orderBy("createdAt", Query.Direction.ASCENDING)
+            .get()
+            .await()
+            .documents
+            .mapNotNull { it.toComment(postId) }
+    }
 
-    override suspend fun addComment(postId: String, text: String): Result<Comment> = TODO()
+    // コメントの追加と commentCount の更新は同じバッチで行う（セキュリティルールもそれを前提にしている）
+    override suspend fun addComment(postId: String, text: String): Result<Comment> = runCatching {
+        validatePostText(text)
+        val user = auth.currentUser ?: error("Not signed in")
+        val post = posts.document(postId)
+        if (!post.get().await().exists()) throw NoSuchElementException("Post not found: $postId")
+        val authorName = user.displayName.orEmpty()
+        val comment = post.collection("comments").document()
+        firestore.batch().apply {
+            set(
+                comment,
+                mapOf(
+                    "authorId" to user.uid,
+                    "authorName" to authorName,
+                    "text" to text,
+                    "createdAt" to FieldValue.serverTimestamp(),
+                ),
+            )
+            update(post, "commentCount", FieldValue.increment(1))
+        }.commit().await()
+        Comment(
+            id = comment.id,
+            postId = postId,
+            authorId = user.uid,
+            authorName = authorName,
+            text = text,
+            createdAt = System.currentTimeMillis(),
+        )
+    }
 }
 
 /** タイムラインで一度に購読する件数。全件を購読し続けないよう上限を設ける。 */
@@ -122,7 +157,7 @@ private const val TIMELINE_LIMIT = 50L
 
 private const val BATCH_LIMIT = 500
 
-/** 本文のルール（1〜[Post.MAX_TEXT_LENGTH] 文字、空白だけは不可）。セキュリティルールと合わせる。 */
+/** 投稿・コメントの本文のルール（1〜[Post.MAX_TEXT_LENGTH] 文字、空白だけは不可）。セキュリティルールと合わせる。 */
 internal fun validatePostText(text: String) {
     require(text.isNotBlank()) { "Post text is blank" }
     require(text.length <= Post.MAX_TEXT_LENGTH) { "Post text is too long" }
@@ -150,3 +185,13 @@ private fun DocumentSnapshot.toPost(): Post? {
         commentCount = getLong("commentCount")?.toInt() ?: 0,
     )
 }
+
+private fun DocumentSnapshot.toComment(postId: String): Comment? = Comment(
+    id = id,
+    postId = postId,
+    authorId = getString("authorId") ?: return null,
+    authorName = getString("authorName") ?: return null,
+    text = getString("text") ?: return null,
+    createdAt = getTimestamp("createdAt", DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+        ?.toDate()?.time ?: return null,
+)
