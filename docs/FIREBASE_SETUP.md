@@ -79,6 +79,9 @@ Firestore は「距離で絞り込む」クエリを直接持たないため、*
 
 ## 6. セキュリティルール
 
-- 投稿の作成・編集・削除は本人のみ。
+ルールはリポジトリのルートの `firestore.rules`。
+
 - 読み取りはログインユーザーのみ。
-- ルールは Firebase Emulator Suite でテストしてから本番に反映する。
+- 投稿・コメント・プロフィールの作成は本人の uid でのみ。投稿の削除は投稿者のみ。
+- 本文の編集はまだ認めていない（#16 で追加する）。`commentCount` はコメント追加と同じバッチで 1 増やすときだけ変更できる。
+- ルールは `firestore-tests/` のテストを Emulator で通してから、`firebase deploy --only firestore:rules` で本番に反映する（`firestore-tests/README.md`）。
