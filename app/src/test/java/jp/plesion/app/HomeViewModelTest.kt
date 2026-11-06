@@ -9,6 +9,7 @@ import jp.plesion.app.data.model.GeoPoint
 import jp.plesion.app.data.model.Post
 import jp.plesion.app.data.remote.filterNearby
 import jp.plesion.app.data.repository.PostRepository
+import jp.plesion.app.feature.feed.FeedPost
 import jp.plesion.app.feature.feed.HomeViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +36,7 @@ class HomeViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun HomeViewModel.posts(): List<Post> = (uiState.value as UiState.Success).data
+    private fun HomeViewModel.posts(): List<FeedPost> = (uiState.value as UiState.Success).data
 
     @Test
     fun initialState_isLoading_untilRefresh() {
@@ -84,7 +85,7 @@ class HomeViewModelTest {
     fun refresh_farFromAllPosts_showsEmptyList() {
         val viewModel = HomeViewModel(TestPostRepository(), TestLocationProvider(Result.success(GeoPoint(43.0, 141.0))))
         viewModel.refresh()
-        assertEquals(emptyList<Post>(), viewModel.posts())
+        assertEquals(emptyList<FeedPost>(), viewModel.posts())
     }
 
     @Test
@@ -165,7 +166,7 @@ class HomeViewModelTest {
         location.gate?.complete(Unit)
 
         assertEquals(GeoPoint(43.0, 141.0), repository.nearbyCenters.last().first)
-        assertEquals(emptyList<Post>(), viewModel.posts())
+        assertEquals(emptyList<FeedPost>(), viewModel.posts())
     }
 
     @Test
