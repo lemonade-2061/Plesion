@@ -62,7 +62,8 @@ fun HomeScreen(
         contentColor = Color.White,
     ) {
         Column(Modifier.fillMaxSize()) {
-            HomeTopBar()
+            val areaName by viewModel.areaName.collectAsStateWithLifecycle()
+            HomeTopBar(areaName)
 
             // バーの下の残り全部を、権限チェック+一覧に使う
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -111,7 +112,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeTopBar() {
+private fun HomeTopBar(areaName: String?) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -122,7 +123,7 @@ private fun HomeTopBar() {
         Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFE8502F))
         Spacer(Modifier.width(8.dp))
         Text(
-            "金沢・野々市市エリア▼",
+            "${areaName ?: "現在地周辺"}エリア",
             color = Color.Black,
             fontSize = 18.sp,
             modifier = Modifier.weight(1f),

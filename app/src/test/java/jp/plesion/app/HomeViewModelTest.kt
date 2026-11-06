@@ -192,4 +192,27 @@ class HomeViewModelTest {
 
         assertEquals(created.id, viewModel.posts().first().id)
     }
+
+    @Test
+    fun refresh_showsAreaNameOfCurrentLocation() {
+        val viewModel = HomeViewModel(TestPostRepository(), TestLocationProvider())
+        assertEquals(null, viewModel.areaName.value)
+
+        viewModel.refresh()
+
+        assertEquals("千代田区", viewModel.areaName.value)
+    }
+
+    @Test
+    fun refresh_keepsPreviousAreaName_whenLookupFails() {
+        val location = TestLocationProvider()
+        val viewModel = HomeViewModel(TestPostRepository(), location)
+        viewModel.refresh()
+
+        location.areaName = Result.failure(LocationUnavailableException())
+        viewModel.refresh()
+
+        assertEquals("千代田区", viewModel.areaName.value)
+        assertTrue(viewModel.uiState.value is UiState.Success)
+    }
 }

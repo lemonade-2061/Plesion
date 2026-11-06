@@ -9,4 +9,7 @@ import jp.plesion.app.data.model.GeoPoint
  */
 interface LocationProvider {
     suspend fun getCurrentLocation(): Result<GeoPoint>
+
+    /** [point] の市区町村名（例: 野々市市）。番地までは返さない。取れなければ Result.failure。 */
+    suspend fun getAreaName(point: GeoPoint): Result<String>
 }

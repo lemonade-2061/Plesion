@@ -12,6 +12,7 @@ class FusedLocationProviderTest {
         val provider = FusedLocationProvider(
             hasPermission = { false },
             client = { error("権限がないときは位置情報クライアントを使わない") },
+            geocoder = { null },
         )
 
         val result = provider.getCurrentLocation()

@@ -23,6 +23,10 @@ class TestLocationProvider(var result: Result<GeoPoint> = Result.success(TOKYO_S
         gate?.await()
         return snapshot
     }
+
+    var areaName: Result<String> = Result.success("千代田区")
+
+    override suspend fun getAreaName(point: GeoPoint): Result<String> = areaName
 }
 
 /** FakePostRepository に委譲しつつ、失敗を差し込めるようにしたもの。 */
