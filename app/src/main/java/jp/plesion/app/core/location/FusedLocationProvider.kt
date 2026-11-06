@@ -4,13 +4,23 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
+import android.os.Build
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import jp.plesion.app.data.model.GeoPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.util.Locale
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * 正確な位置（FINE）の権限がないときに返す失敗。おおよその位置（COARSE）だけの場合も含む。
@@ -29,11 +39,14 @@ class LocationUnavailableException : IllegalStateException("Current location is 
 class FusedLocationProvider(
     private val hasPermission: () -> Boolean,
     private val client: () -> FusedLocationProviderClient,
+    private val geocoder: () -> Geocoder?,
 ) : LocationProvider {
 
     constructor(context: Context) : this(
         hasPermission = { context.hasLocationPermission() },
         client = { LocationServices.getFusedLocationProviderClient(context) },
+        // 地名を日本語で受け取る。Geocoder のない端末（一部のエミュレータなど）では null
+        geocoder = { if (Geocoder.isPresent()) Geocoder(context, Locale.JAPAN) else null },
     )
 
     // 権限は hasPermission で確認済み。確認後に取り消された場合の SecurityException も runCatching で失敗にする
@@ -50,7 +63,35 @@ class FusedLocationProvider(
             GeoPoint(location.latitude, location.longitude)
         }
     }
+
+    // 東京 23 区などは locality が空で subAdminArea に区名が入ることがあるので順に探す
+    override suspend fun getAreaName(point: GeoPoint): Result<String> = runCatching {
+        val address = geocoder()?.firstAddress(point) ?: throw LocationUnavailableException()
+        address.locality ?: address.subAdminArea ?: address.adminArea ?: throw LocationUnavailableException()
+    }
 }
+
+// Android 13 以降は同期版が非推奨になり、コールバック版が追加された
+private suspend fun Geocoder.firstAddress(point: GeoPoint): Address? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        suspendCancellableCoroutine { continuation ->
+            getFromLocation(point.latitude, point.longitude, 1, object : Geocoder.GeocodeListener {
+                override fun onGeocode(addresses: MutableList<Address>) {
+                    continuation.resume(addresses.firstOrNull())
+                }
+
+                override fun onError(errorMessage: String?) {
+                    continuation.resumeWithException(IOException(errorMessage))
+                }
+            })
+        }
+    } else {
+        // 同期版は通信するのでメインスレッドで呼ばない
+        withContext(Dispatchers.IO) {
+            @Suppress("DEPRECATION")
+            getFromLocation(point.latitude, point.longitude, 1)?.firstOrNull()
+        }
+    }
 
 // おおよその位置（COARSE）は誤差が 1km 前後あり、1km 検索の精度を保証できないため FINE を必須にする
 private fun Context.hasLocationPermission(): Boolean =

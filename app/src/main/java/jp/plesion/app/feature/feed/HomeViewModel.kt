@@ -39,6 +39,10 @@ class HomeViewModel(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    /** トップバーに出す現在地の市区町村名。まだ取れていなければ null。 */
+    private val _areaName = MutableStateFlow<String?>(null)
+    val areaName: StateFlow<String?> = _areaName.asStateFlow()
+
     private var loadJob: Job? = null
     private var rerunRequested = false
 
@@ -66,6 +70,10 @@ class HomeViewModel(
     private suspend fun loadNearbyPosts(): UiState<List<FeedPost>> {
         val center = locationProvider.getCurrentLocation()
             .getOrElse { return UiState.Error(it.toLocationErrorMessage()) }
+        // 地名は一覧の表示を待たせないよう並行して取る。取れなければ前の地名を残す
+        viewModelScope.launch {
+            locationProvider.getAreaName(center).onSuccess { _areaName.value = it }
+        }
         return postRepository.getNearbyPosts(center, NEARBY_RADIUS_METERS).fold(
             onSuccess = { posts ->
                 UiState.Success(
