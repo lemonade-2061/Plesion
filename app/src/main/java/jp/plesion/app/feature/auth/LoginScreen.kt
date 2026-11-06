@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -26,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -72,7 +72,6 @@ fun LoginContent(
         modifier = modifier
             .fillMaxSize()
             .background(BgPurple)
-            .systemBarsPadding()
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -123,7 +122,7 @@ private fun GoogleLoginButton(
             .height(48.dp)
             .clip(RoundedCornerShape(50))
             .background(Brush.horizontalGradient(listOf(Accent, AccentDark)))
-            .clickable(enabled = !isLoading) { onClick() },
+            .clickable(enabled = !isLoading, role = Role.Button) { onClick() },
         contentAlignment = Alignment.Center,
     ) {
         if (isLoading) {
