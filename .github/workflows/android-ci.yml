@@ -20,6 +20,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 画面側は Repository 経由でデータを扱う（docs/DATA_CONTRACT.md §1）。Firebase は data/remote/ の中だけで使う
+      - name: Check UI code does not use Firebase directly
+        run: |
+          base=app/src/main/java/jp/plesion/app
+          if grep -rn "import com\.google\.firebase" "$base/feature" "$base/navigation" "$base/core/ui"; then
+            echo "::error::feature/ navigation/ core/ui/ から Firebase を直接使わず、data/repository/ の Repository を使ってください"
+            exit 1
+          fi
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

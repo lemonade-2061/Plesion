@@ -1,0 +1,8 @@
+# ここに書いたファイルを変える PR は、自動で takuma がレビュアーに入る（docs/FEATURE_OWNERSHIP.md）
+/app/src/main/java/jp/plesion/app/data/ @lemonade-2061
+/app/src/main/java/jp/plesion/app/di/ @lemonade-2061
+/app/src/main/java/jp/plesion/app/core/location/ @lemonade-2061
+/firestore.rules @lemonade-2061
+/firebase.json @lemonade-2061
+/firestore-tests/ @lemonade-2061
+/docs/DATA_CONTRACT.md @lemonade-2061
