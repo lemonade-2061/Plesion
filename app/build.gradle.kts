@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.play.services.location)
+    implementation("androidx.compose.material:material-icons-core")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
