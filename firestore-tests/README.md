@@ -18,6 +18,20 @@ npm test
 
 `demo-plesion` という仮のプロジェクトで Emulator を立てるので、本番のデータには触れない。
 
+## Emulator UI で中身を見る
+
+`npm test` はテストが終わると Emulator を止めるので、UI で見るときは立ち上げっぱなしにする。
+
+```bash
+# リポジトリのルートで
+firebase emulators:start --only firestore --project demo-plesion
+# 別のターミナルで
+cd firestore-tests
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node --test
+```
+
+http://127.0.0.1:4000 の Firestore タブでデータ、Requests タブでルールの許可・拒否が見られる。テストは毎回データを消すので、終わった後はほぼ空になる。
+
 ## 本番への反映（takuma）
 
 ```bash
