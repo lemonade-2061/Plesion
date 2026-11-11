@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** 投稿本文の最大文字数。 */
-const val MAX_POST_LENGTH = 300
+const val MAX_POST_LENGTH = 500
 
 data class CreatePostUiState(
     val text: String = "",

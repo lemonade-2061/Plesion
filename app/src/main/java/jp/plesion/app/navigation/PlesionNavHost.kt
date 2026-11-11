@@ -116,6 +116,7 @@ fun PlesionNavHost(
                         initializer { CreatePostViewModel(container.postRepository, container.locationProvider) }
                     }),
                     onPosted = { navController.navigateToTab(Routes.HOME) },
+                    onBack = { navController.navigateToTab(Routes.HOME) },
                 )
             }
             composable(Routes.PROFILE) {
