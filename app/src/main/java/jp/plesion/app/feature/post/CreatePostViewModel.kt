@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** 投稿本文の最大文字数。 */
+const val MAX_POST_LENGTH = 500
+
 data class CreatePostUiState(
     val text: String = "",
     val isSubmitting: Boolean = false,
@@ -27,7 +30,8 @@ class CreatePostViewModel(
     val uiState: StateFlow<CreatePostUiState> = _uiState.asStateFlow()
 
     fun onTextChange(text: String) {
-        _uiState.update { it.copy(text = text, errorMessage = null) }
+        // 貼り付けなどで上限を超えても、300文字までで切る
+        _uiState.update { it.copy(text = text.take(MAX_POST_LENGTH), errorMessage = null) }
     }
 
     // TODO(tajima): 画像添付を追加する
