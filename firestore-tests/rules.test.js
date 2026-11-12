@@ -53,6 +53,7 @@ function newPost(overrides = {}) {
   return {
     authorId: 'alice',
     authorName: 'Alice',
+    isAnonymous: false,
     text: 'hello',
     imageUrls: [],
     location: new GeoPoint(35.681, 139.767),
@@ -151,6 +152,83 @@ describe('posts', () => {
     await seedPost();
     await assertFails(deleteDoc(doc(bob(), 'posts', 'p1')));
     await assertSucceeds(deleteDoc(doc(alice(), 'posts', 'p1')));
+  });
+});
+
+// 匿名投稿と private/owner を 1 回のバッチで作る
+function createAnonymousBatch(db, postId, { post = {}, ownerUid = 'alice', withOwner = true } = {}) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'posts', postId), newPost({ authorId: '', authorName: '匿名', isAnonymous: true, ...post }));
+  if (withOwner) batch.set(doc(db, 'posts', postId, 'private', 'owner'), { uid: ownerUid });
+  return batch.commit();
+}
+
+// ルールを通さずに alice の匿名投稿を置く
+async function seedAnonymousPost(id = 'p1') {
+  await seedPost(id, { authorId: '', authorName: '匿名', isAnonymous: true });
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'posts', id, 'private', 'owner'), { uid: 'alice' });
+  });
+}
+
+function deleteAnonymousBatch(db, postId) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, 'posts', postId, 'private', 'owner'));
+  batch.delete(doc(db, 'posts', postId));
+  return batch.commit();
+}
+
+describe('anonymous posts', () => {
+  test('private/owner と同じバッチなら匿名で作れる', async () => {
+    await assertSucceeds(createAnonymousBatch(alice(), 'p1'));
+  });
+
+  test('uid・名前を入れたり、owner なし・他人の owner では匿名で作れない', async () => {
+    await assertFails(createAnonymousBatch(alice(), 'p1', { post: { authorId: 'alice' } }));
+    await assertFails(createAnonymousBatch(alice(), 'p1', { post: { authorName: 'Alice' } }));
+    await assertFails(createAnonymousBatch(alice(), 'p1', { withOwner: false }));
+    await assertFails(createAnonymousBatch(alice(), 'p1', { ownerUid: 'bob' }));
+  });
+
+  test('isAnonymous がない・名前つきの投稿に owner は作れない', async () => {
+    const { isAnonymous, ...withoutFlag } = newPost();
+    await assertFails(setDoc(doc(alice(), 'posts', 'p1'), withoutFlag));
+    const db = alice();
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'posts', 'p1'), newPost());
+    batch.set(doc(db, 'posts', 'p1', 'private', 'owner'), { uid: 'alice' });
+    await assertFails(batch.commit());
+  });
+
+  test('既存の投稿に後から owner を付けられない', async () => {
+    await seedPost('p1', { authorId: '', authorName: '匿名', isAnonymous: true });
+    await assertFails(setDoc(doc(bob(), 'posts', 'p1', 'private', 'owner'), { uid: 'bob' }));
+  });
+
+  test('owner は本人しか読めない', async () => {
+    await seedAnonymousPost();
+    await assertSucceeds(getDoc(doc(alice(), 'posts', 'p1', 'private', 'owner')));
+    await assertFails(getDoc(doc(bob(), 'posts', 'p1', 'private', 'owner')));
+    await assertFails(getDoc(doc(guest(), 'posts', 'p1', 'private', 'owner')));
+  });
+
+  test('本人だけが owner ごと削除でき、owner だけは消せない', async () => {
+    await seedAnonymousPost();
+    await assertFails(deleteAnonymousBatch(bob(), 'p1'));
+    await assertFails(deleteDoc(doc(alice(), 'posts', 'p1', 'private', 'owner')));
+    await assertSucceeds(deleteAnonymousBatch(alice(), 'p1'));
+  });
+
+  test('本人は他人のコメントごと匿名投稿を消せる', async () => {
+    await seedAnonymousPost();
+    await addCommentBatch(bob(), 'p1', 'c1');
+    await assertFails(deleteDoc(doc(bob(), 'posts', 'p1', 'comments', 'c1')));
+    const db = alice();
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'posts', 'p1', 'comments', 'c1'));
+    batch.delete(doc(db, 'posts', 'p1', 'private', 'owner'));
+    batch.delete(doc(db, 'posts', 'p1'));
+    await assertSucceeds(batch.commit());
   });
 });
 

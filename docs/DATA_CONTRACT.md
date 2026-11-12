@@ -18,7 +18,7 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 |---|---|---|---|---|
 | `authorId` | string | `authorId` | ○ | 投稿者の uid。**匿名投稿では空文字**（§4） |
 | `authorName` | string | `authorName` | ○ | 表示名。匿名投稿では `"匿名"` |
-| `isAnonymous` | bool | （未追加。匿名投稿 UI（#20）の PR で追加） | ○ | 匿名投稿か |
+| `isAnonymous` | bool | `isAnonymous` | ○ | 匿名投稿か。この項目がない古い投稿は `false` として扱う |
 | `text` | string | `text` | ○ | 本文。1〜500 文字 |
 | `imageUrls` | array\<string\> | `imageUrls` | − | Storage のダウンロード URL。最大 4 枚 |
 | `location` | geopoint | `location: GeoPoint?` | ○ | 投稿位置（§4 の丸め後の値）。Kotlin では null 可だが、`createPost` は null なら失敗を返す |
@@ -53,6 +53,8 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 1. **投稿ドキュメントに本人を特定できる情報を入れない。** `authorId = ""`, `authorName = "匿名"`, プロフィール画像なし。
    Firestore はドキュメント単位でしか読み取り制御できないため、「フィールドを隠す」ことはできない。
 2. **本人確認用の uid は別の場所に保存する。** `posts/{postId}/private/owner` に `{ uid }` を置き、セキュリティルールで本人のみ読み取り可にする（編集・削除の権限確認に使う）。
+   - `private/owner` は匿名投稿だけに作る。投稿と同じバッチでしか作れず、投稿と同じバッチでしか消せない（#19）。
+   - 自分の投稿かどうか（編集・削除ボタンを出すか）は、画面側で `authorId` と比べずに `PostRepository.isMyPost(post)` を使う。
 3. **位置を丸める。** すべての投稿で、保存前に緯度経度を小数第3位（約100m）に丸める。自宅などの特定を防ぐため。
    検索用と公開用の位置は分けず、丸めた位置（`location` と、そこから計算した `geohash`）だけを保存する。丸める前の位置はどこにも保存しない（#27）。
 4. **距離は段階で表示する。** 画面には「100m以内 / 300m以内 / 500m以内 / 1km以内」だけを出し、細かい距離は出さない。場所を変えて何度も見ることで投稿位置を絞り込まれにくくするため（#27）。
@@ -66,3 +68,4 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 | 2026-10-23 | 初版 |
 | 2026-10-30 | 本文の上限（500 文字）と画像の上限（4 枚）を確定。`location` は null 可の型のまま `createPost` で必須チェックすることに決定（#6） |
 | 2026-11-10 | タイムライン（全件取得）を廃止し、投稿の一覧取得を件数上限付きに制限（#26）。位置の扱いと距離の段階表示を確定（#27） |
+| 2026-11-12 | `isAnonymous` を追加。匿名投稿の `private/owner` の作成・削除ルールと `isMyPost` を確定（#19） |

@@ -55,8 +55,8 @@ class TestPostRepository(
         return delegate.getComments(postId)
     }
 
-    override suspend fun createPost(text: String, location: GeoPoint?): Result<Post> {
+    override suspend fun createPost(text: String, location: GeoPoint?, isAnonymous: Boolean): Result<Post> {
         createdLocations += location
-        return delegate.createPost(text, location)
+        return delegate.createPost(text, location, isAnonymous)
     }
 }
