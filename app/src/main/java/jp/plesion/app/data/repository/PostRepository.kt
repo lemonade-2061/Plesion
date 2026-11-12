@@ -14,6 +14,9 @@ interface PostRepository {
 
     suspend fun getPost(postId: String): Result<Post>
 
+    /** ログイン中のユーザーの投稿。新しい順。自分の匿名投稿も含む（本人にだけ返す）。 */
+    suspend fun getMyPosts(): Result<List<Post>>
+
     /**
      * [isAnonymous] なら投稿者名を「匿名」にし、uid は本人しか読めない場所に保存する（DATA_CONTRACT §4）。
      * [imageUris] は Photo Picker で選んだ画像（[Post.MAX_IMAGES] 枚まで）。縮小・位置情報の削除・アップロードはここで行う。

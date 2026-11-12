@@ -35,9 +35,13 @@ service cloud.firestore {
 
       // 一覧は件数上限付きのクエリだけ。全件をまとめて取られないようにする（DATA_CONTRACT §3）
       // 閲覧者の現在地はルールから見えないので、「1km 以内だけ」までは強制できない
+      // - 近くの投稿: geohash 順のクエリだけ。authorId で絞るには (authorId, geohash) の複合インデックスが要り、
+      //   それを用意しないことで他人の投稿を場所に関係なく集められないようにする（#50）
+      // - 自分の投稿: 自分の authorId で絞ったクエリだけ
       allow list: if signedIn()
         && request.query.limit != null
-        && request.query.limit <= 100;
+        && request.query.limit <= 100
+        && ('geohash' in request.query.orderBy || resource.data.authorId == request.auth.uid);
 
       // 名前つきは本人の uid で、匿名は uid なし・名前「匿名」で、private/owner を同じバッチで作るときだけ作れる
       // createdAt はサーバー時刻、commentCount は 0 から
@@ -107,6 +111,14 @@ service cloud.firestore {
         // 投稿の削除時に、投稿者がコメントもまとめて消す
         allow delete: if signedIn() && isPostOwner(postId);
       }
+    }
+
+    // 自分の匿名投稿を探す（コレクショングループクエリ）。自分の uid で絞ったクエリだけ
+    match /{path=**}/private/{docId} {
+      allow list: if signedIn()
+        && request.query.limit != null
+        && request.query.limit <= 100
+        && resource.data.uid == request.auth.uid;
     }
 
     match /users/{userId} {
