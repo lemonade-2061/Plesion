@@ -7,7 +7,7 @@ import jp.plesion.app.data.model.Post
 
 interface PostRepository {
     /**
-     * [center] から [radiusMeters] 以内の投稿。新しい順。
+     * [center] から [radiusMeters] 以内、直近 24 時間の投稿。新しい順。
      * 全件を取るタイムラインは位置情報の公開範囲を超えるので用意しない（DATA_CONTRACT §3）。
      */
     suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double = 1_000.0): Result<List<Post>>
