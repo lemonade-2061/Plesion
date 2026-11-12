@@ -62,6 +62,36 @@ class FirestorePostRepository(
             filterNearby(candidates, center, radiusMeters)
         }
 
+    // 名前つきは authorId で、匿名は private/owner のコレクショングループで探す（どちらもルールが自分の uid での絞り込みを求める）
+    // 必要なインデックスは firestore.indexes.json
+    override suspend fun getMyPosts(): Result<List<Post>> = runCatching {
+        val uid = auth.currentUser?.uid ?: error("Not signed in")
+        coroutineScope {
+            val named = async {
+                posts.whereEqualTo("authorId", uid)
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(MY_POSTS_LIMIT)
+                    .get()
+                    .await()
+                    .documents
+                    .mapNotNull { it.toPost() }
+            }
+            val anonymous = async {
+                firestore.collectionGroup("private")
+                    .whereEqualTo("uid", uid)
+                    .limit(MY_POSTS_LIMIT)
+                    .get()
+                    .await()
+                    .documents
+                    .mapNotNull { it.reference.parent.parent }
+                    .map { post -> async { post.get().await().takeIf { it.exists() }?.toPost() } }
+                    .awaitAll()
+                    .filterNotNull()
+            }
+            (named.await() + anonymous.await()).sortedByDescending { it.createdAt }
+        }
+    }
+
     override suspend fun getPost(postId: String): Result<Post> = runCatching {
         val snapshot = posts.document(postId).get().await()
         if (!snapshot.exists()) throw NoSuchElementException("Post not found: $postId")
@@ -211,6 +241,9 @@ class FirestorePostRepository(
 
 /** geohash の範囲 1 つあたりの取得件数。firestore.rules の一覧取得の上限と合わせる。 */
 private const val NEARBY_QUERY_LIMIT = 100L
+
+/** 自分の投稿の取得件数（名前つき・匿名それぞれ）。firestore.rules の一覧取得の上限と合わせる。 */
+private const val MY_POSTS_LIMIT = 100L
 
 private const val BATCH_LIMIT = 500
 

@@ -41,6 +41,20 @@ class FakePostRepositoryTest {
     }
 
     @Test
+    fun getMyPosts_includesOwnAnonymousPostsNewestFirst() = runTest {
+        val repository = FakePostRepository()
+        val named = repository.createPost("named", location = center).getOrThrow()
+        val anonymous = repository.createPost("anonymous", location = center, isAnonymous = true).getOrThrow()
+
+        val mine = repository.getMyPosts().getOrThrow()
+
+        assertTrue(mine.any { it.id == named.id })
+        assertTrue(mine.any { it.id == anonymous.id })
+        assertTrue(mine.all { it.authorId == SampleData.me.id || it.isAnonymous })
+        assertEquals(mine.sortedByDescending { it.createdAt }, mine)
+    }
+
+    @Test
     fun isMyPost_isFalseForOthersPosts() = runTest {
         val repository = FakePostRepository()
         val others = SampleData.posts.first { it.authorId != SampleData.me.id }

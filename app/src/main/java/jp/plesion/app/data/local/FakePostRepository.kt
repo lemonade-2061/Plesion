@@ -20,6 +20,12 @@ class FakePostRepository : PostRepository {
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> =
         Result.success(filterNearby(posts.value, center, radiusMeters))
 
+    override suspend fun getMyPosts(): Result<List<Post>> = Result.success(
+        posts.value
+            .filter { it.authorId == SampleData.me.id || it.id in myAnonymousPostIds }
+            .sortedByDescending { it.createdAt },
+    )
+
     override suspend fun getPost(postId: String): Result<Post> {
         val post = posts.value.find { it.id == postId }
             ?: return Result.failure(NoSuchElementException("Post not found: $postId"))

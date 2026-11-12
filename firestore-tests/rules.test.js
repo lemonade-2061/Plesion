@@ -11,6 +11,7 @@ import {
   Timestamp,
   deleteDoc,
   collection,
+  collectionGroup,
   doc,
   getDoc,
   getDocs,
@@ -22,6 +23,7 @@ import {
   setDoc,
   setLogLevel,
   updateDoc,
+  where,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -107,6 +109,24 @@ describe('posts', () => {
     await assertFails(getDocs(query(posts, orderBy('geohash'), limit(101))));
     await assertFails(getDocs(query(posts, orderBy('createdAt', 'desc'))));
     await assertFails(getDocs(query(collection(guest(), 'posts'), limit(10))));
+  });
+
+  // authorId で絞って geohash 順に並べるクエリは Emulator では通るが、本番では
+  // (authorId, geohash) の複合インデックスがないので失敗する（firestore.indexes.json に入れないこと）
+  test('近くの投稿以外は、geohash 順でないと一覧を取れない（他人の投稿を集められない）', async () => {
+    await seedPost();
+    const posts = collection(bob(), 'posts');
+    await assertFails(getDocs(query(posts, orderBy('createdAt', 'desc'), limit(10))));
+    await assertFails(getDocs(query(posts, limit(10))));
+    await assertFails(getDocs(query(posts, where('authorId', '==', 'alice'), limit(10))));
+    await assertFails(getDocs(query(posts, where('authorId', '==', 'alice'), orderBy('createdAt', 'desc'), limit(10))));
+  });
+
+  test('自分の投稿は、自分の authorId で絞れば取れる', async () => {
+    await seedPost();
+    const posts = collection(alice(), 'posts');
+    await assertSucceeds(getDocs(query(posts, where('authorId', '==', 'alice'), orderBy('createdAt', 'desc'), limit(100))));
+    await assertFails(getDocs(query(posts, where('authorId', '==', 'alice'), orderBy('createdAt', 'desc'), limit(101))));
   });
 
   test('本人の名前で作れる', async () => {
@@ -203,6 +223,14 @@ describe('anonymous posts', () => {
   test('既存の投稿に後から owner を付けられない', async () => {
     await seedPost('p1', { authorId: '', authorName: '匿名', isAnonymous: true });
     await assertFails(setDoc(doc(bob(), 'posts', 'p1', 'private', 'owner'), { uid: 'bob' }));
+  });
+
+  test('自分の匿名投稿は、自分の uid で絞れば owner から探せる', async () => {
+    await seedAnonymousPost();
+    await assertSucceeds(getDocs(query(collectionGroup(alice(), 'private'), where('uid', '==', 'alice'), limit(100))));
+    await assertFails(getDocs(query(collectionGroup(bob(), 'private'), where('uid', '==', 'alice'), limit(100))));
+    await assertFails(getDocs(query(collectionGroup(bob(), 'private'), limit(100))));
+    await assertFails(getDocs(query(collectionGroup(alice(), 'private'), where('uid', '==', 'alice'), limit(101))));
   });
 
   test('owner は本人しか読めない', async () => {
