@@ -17,6 +17,9 @@ data class Post(
         /** 本文の最大文字数（DATA_CONTRACT §2）。 */
         const val MAX_TEXT_LENGTH = 500
 
+        /** 画像の最大枚数（DATA_CONTRACT §2）。 */
+        const val MAX_IMAGES = 4
+
         /** 匿名投稿の表示名（DATA_CONTRACT §4）。 */
         const val ANONYMOUS_NAME = "匿名"
     }

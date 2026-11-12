@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Cloud Storage のセキュリティルール。項目の定義は docs/DATA_CONTRACT.md を正とする。
+// 変更したら firestore-tests/ のテストを Emulator で通してから反映する（docs/FIREBASE_SETUP.md §6）。
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function postPath(postId) {
+      return /databases/(default)/documents/posts/$(postId);
+    }
+
+    function ownerPath(postId) {
+      return /databases/(default)/documents/posts/$(postId)/private/owner;
+    }
+
+    // 名前つきの投稿は authorId、匿名投稿は private/owner で本人か確かめる（firestore.rules の isPostOwner と同じ）
+    function isPostOwner(postId) {
+      return firestore.get(postPath(postId)).data.authorId == request.auth.uid
+        || (firestore.exists(ownerPath(postId)) && firestore.get(ownerPath(postId)).data.uid == request.auth.uid);
+    }
+
+    // パスに uid を入れない。ダウンロード URL にパスが含まれ、匿名投稿の投稿者が分かってしまうため（DATA_CONTRACT §4）
+    match /posts/{postId}/images/{fileName} {
+      allow read: if signedIn();
+
+      // 投稿を作る前にアップロードする。投稿ができた後は追加・差し替えできない
+      // 端末で縮小した JPEG だけ（EXIF の位置情報は端末側で消している）
+      allow create: if signedIn()
+        && fileName.matches('[0-3][.]jpg')
+        && request.resource.size <= 2 * 1024 * 1024
+        && request.resource.contentType == 'image/jpeg'
+        && !firestore.exists(postPath(postId));
+
+      allow update: if false;
+
+      // 投稿の持ち主が投稿を消す前に消す。投稿の作成に失敗したときの後始末も認める
+      allow delete: if signedIn()
+        && (!firestore.exists(postPath(postId)) || isPostOwner(postId));
+    }
+  }
+}
