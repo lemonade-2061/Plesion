@@ -26,6 +26,7 @@ data class FeedPost(
     val distance: String,
     val body: String,
     val commentCount: Int,
+    val imageUrls: List<String> = emptyList(),
 )
 
 class HomeViewModel(
@@ -83,6 +84,7 @@ private fun Post.toFeedPost(center: GeoPoint): FeedPost = FeedPost(
     distance = location?.let { formatDistance(GeoUtils.distanceMeters(center, it)) }.orEmpty(),
     body = text,
     commentCount = commentCount,
+    imageUrls = imageUrls,
 )
 
 /** エポックミリ秒から「たった今 / 〇分前 / 〇時間前 / 〇日前」を作る。 */

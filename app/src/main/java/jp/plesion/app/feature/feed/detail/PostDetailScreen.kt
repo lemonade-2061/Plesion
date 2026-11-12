@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import jp.plesion.app.core.ui.PostImages
 import jp.plesion.app.core.ui.UiState
 import jp.plesion.app.core.ui.UiStateContent
 import jp.plesion.app.data.model.Comment
@@ -140,6 +141,10 @@ fun PostDetailScreen(
                                     fontWeight = FontWeight.Bold,
                                     lineHeight = 20.sp,
                                 )
+                                if (post.imageUrls.isNotEmpty()) {
+                                    Spacer(Modifier.height(10.dp))
+                                    PostImages(post.imageUrls)
+                                }
                                 Spacer(Modifier.height(12.dp))
                                 Row(
                                     Modifier.fillMaxWidth(),

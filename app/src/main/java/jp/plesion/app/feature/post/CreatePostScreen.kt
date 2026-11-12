@@ -1,5 +1,9 @@
 package jp.plesion.app.feature.post
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -25,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -47,6 +52,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,7 +61,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import jp.plesion.app.core.ui.LocationPermissionGate
+import jp.plesion.app.data.model.Post
 
 private val BgPurple = Color(0xFF42145F)
 private val CardPurple = Color(0xFFA060B0)
@@ -64,13 +73,12 @@ private val AccentDark = Color(0xFF9B1FC0)
 private val ErrorText = Color(0xFFFFB4AB)
 
 /**
- * 画像・カテゴリー・終了日時は、保存先（PostRepository.createPost）がまだ対応していない。
+ * カテゴリー・終了日時は、保存先（PostRepository.createPost）がまだ対応していない。
  * 押せるのに保存されない状態をユーザーに見せないよう、対応するまでは false にして隠す。
  * 対応したら true にして、ViewModel と合わせて実際の処理につなぐ。
  */
 private const val SHOW_UNSUPPORTED_SECTIONS = false
 
-private const val MAX_IMAGES = 4
 private val categories = listOf("おでかけ", "雑談", "ごはん", "スポーツ", "その他")
 
 @Composable
@@ -81,6 +89,10 @@ fun CreatePostScreen(
     onBack: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Photo Picker は権限なしで使える。上限を超えて選ばれた分は ViewModel が捨てる
+    val pickImages = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(Post.MAX_IMAGES),
+    ) { uris -> viewModel.onImagesPicked(uris) }
 
     LaunchedEffect(state.isPosted) {
         if (state.isPosted) {
@@ -94,11 +106,16 @@ fun CreatePostScreen(
         CreatePostContent(
             text = state.text,
             isAnonymous = state.isAnonymous,
+            imageUris = state.imageUris,
             isLocating = state.isLocating,
             isSubmitting = state.isSubmitting,
             errorMessage = state.errorMessage,
             onTextChange = viewModel::onTextChange,
             onAnonymousChange = viewModel::onAnonymousChange,
+            onPickImages = {
+                pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            },
+            onImageRemoved = viewModel::onImageRemoved,
             onSubmit = viewModel::submit,
             onBack = onBack,
             modifier = Modifier.fillMaxSize(),
@@ -110,11 +127,14 @@ fun CreatePostScreen(
 fun CreatePostContent(
     text: String,
     isAnonymous: Boolean,
+    imageUris: List<Uri>,
     isLocating: Boolean,
     isSubmitting: Boolean,
     errorMessage: String?,
     onTextChange: (String) -> Unit,
     onAnonymousChange: (Boolean) -> Unit,
+    onPickImages: () -> Unit,
+    onImageRemoved: (Uri) -> Unit,
     onSubmit: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -212,30 +232,39 @@ fun CreatePostContent(
             }
             Spacer(Modifier.height(20.dp))
 
-            if (SHOW_UNSUPPORTED_SECTIONS) {
-                // 画像
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                    Text("画像を追加", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        "0 / $MAX_IMAGES 枚",
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
+            // 画像
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Text("画像を追加", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "${imageUris.size} / ${Post.MAX_IMAGES} 枚",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                imageUris.forEach { uri ->
+                    SelectedImage(uri, enabled = !isSubmitting, onRemove = { onImageRemoved(uri) }, modifier = Modifier.weight(1f))
+                }
+                // 空いている枠の 1 つ目だけ押せる（押すと Photo Picker を開く）
+                repeat(Post.MAX_IMAGES - imageUris.size) { index ->
+                    ImageSlot(
+                        onClick = if (index == 0 && !isSubmitting) onPickImages else null,
+                        modifier = Modifier.weight(1f),
                     )
                 }
-                Spacer(Modifier.height(8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    repeat(MAX_IMAGES) { ImageSlot(Modifier.weight(1f)) }
-                }
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    "画像はプレビューで確認・削除できます",
-                    color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 10.sp,
-                )
-                Spacer(Modifier.height(20.dp))
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "× で選び直せます。写真の位置情報は投稿時に消えます",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 10.sp,
+            )
+            Spacer(Modifier.height(20.dp))
 
+            if (SHOW_UNSUPPORTED_SECTIONS) {
                 // カテゴリー
                 Text("カテゴリー", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
@@ -345,12 +374,13 @@ private fun ToggleSegment(label: String, selected: Boolean, onClick: () -> Unit)
 }
 
 @Composable
-private fun ImageSlot(modifier: Modifier = Modifier) {
+private fun ImageSlot(onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(20.dp))
-            .background(CardPurple.copy(alpha = 0.6f))
+            .background(CardPurple.copy(alpha = if (onClick != null) 0.6f else 0.3f))
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .drawBehind {
                 drawRoundRect(
                     color = Accent.copy(alpha = 0.8f),
@@ -366,6 +396,32 @@ private fun ImageSlot(modifier: Modifier = Modifier) {
     ) {
         Icon(Icons.Default.Add, contentDescription = "画像を追加", tint = BgPurple, modifier = Modifier.size(28.dp))
         Text("追加", color = BgPurple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun SelectedImage(uri: Uri, enabled: Boolean, onRemove: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.aspectRatio(1f)) {
+        AsyncImage(
+            model = uri,
+            contentDescription = "選んだ画像",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp)),
+        )
+        if (enabled) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable(role = Role.Button, onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "画像を外す", tint = Color.White, modifier = Modifier.size(16.dp))
+            }
+        }
     }
 }
 
@@ -396,11 +452,14 @@ private fun CreatePostContentPreview() {
     CreatePostContent(
         text = "",
         isAnonymous = false,
+        imageUris = emptyList(),
         isLocating = false,
         isSubmitting = false,
         errorMessage = null,
         onTextChange = {},
         onAnonymousChange = {},
+        onPickImages = {},
+        onImageRemoved = {},
         onSubmit = {},
         onBack = {},
     )
