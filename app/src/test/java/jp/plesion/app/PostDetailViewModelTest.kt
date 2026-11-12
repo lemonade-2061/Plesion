@@ -10,11 +10,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -81,6 +83,42 @@ class PostDetailViewModelTest {
         assertEquals("いいね", viewModel.commentInput.value.text)
         assertFalse(viewModel.commentInput.value.isSending)
         assertNotNull(viewModel.commentInput.value.errorMessage)
+    }
+
+    @Test
+    fun ownPost_canBeEdited() {
+        val mine = SampleData.posts.first { it.authorId == SampleData.me.id }
+        val viewModel = PostDetailViewModel(mine.id, TestPostRepository())
+        assertTrue(viewModel.postAction.value.isMine)
+
+        viewModel.startEdit()
+        assertEquals(mine.text, viewModel.postAction.value.editingText)
+        viewModel.onEditTextChange("編集後")
+        viewModel.saveEdit()
+
+        val detail = (viewModel.uiState.value as UiState.Success<PostDetail>).data
+        assertTrue(detail.post.text.endsWith("編集後"))
+        assertNotNull(detail.post.editedAt)
+        assertNull(viewModel.postAction.value.editingText)
+    }
+
+    @Test
+    fun othersPost_isNotMine() {
+        val others = SampleData.posts.first { it.authorId != SampleData.me.id }
+        val viewModel = PostDetailViewModel(others.id, TestPostRepository())
+        assertFalse(viewModel.postAction.value.isMine)
+    }
+
+    @Test
+    fun deletePost_marksDeleted() = runTest {
+        val repository = TestPostRepository()
+        val mine = SampleData.posts.first { it.authorId == SampleData.me.id }
+        val viewModel = PostDetailViewModel(mine.id, repository)
+
+        viewModel.deletePost()
+
+        assertTrue(viewModel.postAction.value.isDeleted)
+        assertTrue(repository.getPost(mine.id).isFailure)
     }
 
     @Test
