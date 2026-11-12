@@ -17,6 +17,7 @@ class FakePostRepository : PostRepository {
     private val myAnonymousPostIds = mutableSetOf<String>()
 
     // 画面の動作確認用に、Firestore 実装と同じ絞り込み（距離・位置なし除外・新しい順）だけ再現する
+    // 期間（24 時間以内）では絞らない。仮データの時刻が固定なので、絞ると何も出なくなるため
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> =
         Result.success(filterNearby(posts.value, center, radiusMeters))
 

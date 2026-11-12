@@ -1,6 +1,7 @@
 package jp.plesion.app.data.remote
 
 import android.net.Uri
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -22,6 +23,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 import com.google.firebase.firestore.GeoPoint as FirestoreGeoPoint
 
 /** Firestore の `posts` コレクションを使う実装。項目は docs/DATA_CONTRACT.md §2 に合わせる。 */
@@ -41,14 +43,18 @@ class FirestorePostRepository(
 
     // geohash の範囲で候補を取り、実際の距離で radiusMeters 以内に絞る
     // セキュリティルールが件数上限のない一覧取得を拒否するので、範囲ごとに limit を付ける
+    // 古い投稿は出さない（#45）。期間もクエリで絞るので、limit に古い投稿が数えられない
+    // geohash と createdAt の両方で絞るので (geohash, createdAt) の複合インデックスが要る（firestore.indexes.json）
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> =
         runCatching {
+            val since = Timestamp(Date(System.currentTimeMillis() - NEARBY_MAX_AGE_MILLIS))
             val snapshots = coroutineScope {
                 GeoUtils.queryRanges(center, radiusMeters).map { range ->
                     async {
                         posts.orderBy("geohash")
                             .startAt(range.start)
                             .endAt(range.end)
+                            .whereGreaterThanOrEqualTo("createdAt", since)
                             .limit(NEARBY_QUERY_LIMIT)
                             .get()
                             .await()
@@ -249,6 +255,9 @@ class FirestorePostRepository(
 
 /** geohash の範囲 1 つあたりの取得件数。firestore.rules の一覧取得の上限と合わせる。 */
 private const val NEARBY_QUERY_LIMIT = 100L
+
+/** ホームに出す投稿の期間（#45）。これより古い投稿は近くても出さない。 */
+private const val NEARBY_MAX_AGE_MILLIS = 24 * 60 * 60 * 1000L
 
 /** 自分の投稿の取得件数（名前つき・匿名それぞれ）。firestore.rules の一覧取得の上限と合わせる。 */
 private const val MY_POSTS_LIMIT = 100L

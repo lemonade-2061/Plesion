@@ -1,4 +1,5 @@
 // firestore.rules のテスト。Emulator で動かす（README.md 参照）。
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { after, beforeEach, before, describe, test } from 'node:test';
 import {
@@ -22,6 +23,8 @@ import {
   serverTimestamp,
   setDoc,
   setLogLevel,
+  startAt,
+  endAt,
   updateDoc,
   where,
   writeBatch,
@@ -109,6 +112,17 @@ describe('posts', () => {
     await assertFails(getDocs(query(posts, orderBy('geohash'), limit(101))));
     await assertFails(getDocs(query(posts, orderBy('createdAt', 'desc'))));
     await assertFails(getDocs(query(collection(guest(), 'posts'), limit(10))));
+  });
+
+  test('近くの投稿は、期間（createdAt）でも絞れる', async () => {
+    const now = Date.now();
+    await seedPost('new', { createdAt: Timestamp.fromMillis(now), geohash: 'xn76urx' });
+    await seedPost('old', { createdAt: Timestamp.fromMillis(now - 2 * 24 * 60 * 60 * 1000), geohash: 'xn76ury' });
+    const since = Timestamp.fromMillis(now - 24 * 60 * 60 * 1000);
+    const snapshot = await assertSucceeds(getDocs(query(
+      collection(bob(), 'posts'), orderBy('geohash'), startAt('xn76'), endAt('xn76~'), where('createdAt', '>=', since), limit(100),
+    )));
+    assert.deepEqual(snapshot.docs.map((d) => d.id), ['new']);
   });
 
   // authorId で絞って geohash 順に並べるクエリは Emulator では通るが、本番では
