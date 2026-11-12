@@ -25,6 +25,7 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 | `geohash` | string | （remote 層のみ） | ○ | 1km 検索用。Android の画面側では使わない |
 | `createdAt` | timestamp | `createdAt: Long` | ○ | サーバー時刻（`FieldValue.serverTimestamp()`） |
 | `commentCount` | number | `commentCount` | ○ | 初期値 0 |
+| `editedAt` | timestamp | `editedAt: Long?` | − | 本文を編集した時刻（サーバー時刻）。編集していなければなし。編集できるのは投稿者が本文だけ（#16） |
 
 コメント `posts/{postId}/comments/{commentId}`: `authorId`, `authorName`, `text`, `createdAt`（`Comment` と同じ）。
 ユーザー `users/{uid}`: `displayName`, `photoUrl`, `bio`（`User` と同じ）。
@@ -76,3 +77,4 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 | 2026-11-12 | `isAnonymous` を追加。匿名投稿の `private/owner` の作成・削除ルールと `isMyPost` を確定（#19） |
 | 2026-11-12 | 画像の保存場所・アップロード手順・Storage のルールを確定（#18） |
 | 2026-11-12 | 一覧取得を geohash 順か自分の投稿に限定し、`getMyPosts` を追加（#50） |
+| 2026-11-12 | 本文の編集（`updatePost`、`editedAt`）を追加（#16） |

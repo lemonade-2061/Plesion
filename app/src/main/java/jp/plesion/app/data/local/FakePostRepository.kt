@@ -56,6 +56,16 @@ class FakePostRepository : PostRepository {
         return Result.success(post)
     }
 
+    override suspend fun updatePost(postId: String, text: String): Result<Post> {
+        if (text.isBlank()) return Result.failure(IllegalArgumentException("Post text is blank"))
+        val post = posts.value.find { it.id == postId }
+            ?: return Result.failure(NoSuchElementException("Post not found: $postId"))
+        if (!isMyPost(post).getOrThrow()) return Result.failure(IllegalStateException("Not the author: $postId"))
+        val updated = post.copy(text = "${SampleData.TEXT_PREFIX} $text", editedAt = System.currentTimeMillis())
+        posts.value = posts.value.map { if (it.id == postId) updated else it }
+        return Result.success(updated)
+    }
+
     override suspend fun deletePost(postId: String): Result<Unit> {
         posts.value = posts.value.filterNot { it.id == postId }
         myAnonymousPostIds -= postId

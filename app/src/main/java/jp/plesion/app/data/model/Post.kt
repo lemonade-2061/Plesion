@@ -12,6 +12,8 @@ data class Post(
     /** エポックミリ秒。Firestore の Timestamp への変換は remote 層で行う。 */
     val createdAt: Long,
     val commentCount: Int = 0,
+    /** 本文を編集した時刻（エポックミリ秒）。編集していなければ null。 */
+    val editedAt: Long? = null,
 ) {
     companion object {
         /** 本文の最大文字数（DATA_CONTRACT §2）。 */

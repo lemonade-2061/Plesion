@@ -7,6 +7,7 @@ import jp.plesion.app.data.model.Post
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -52,6 +53,28 @@ class FakePostRepositoryTest {
         assertTrue(mine.any { it.id == anonymous.id })
         assertTrue(mine.all { it.authorId == SampleData.me.id || it.isAnonymous })
         assertEquals(mine.sortedByDescending { it.createdAt }, mine)
+    }
+
+    @Test
+    fun updatePost_changesTextAndSetsEditedAt() = runTest {
+        val repository = FakePostRepository()
+        val created = repository.createPost("hello", location = center, isAnonymous = true).getOrThrow()
+
+        val updated = repository.updatePost(created.id, "edited").getOrThrow()
+
+        assertTrue(updated.text.endsWith("edited"))
+        assertNotNull(updated.editedAt)
+        assertEquals(updated, repository.getPost(created.id).getOrThrow())
+    }
+
+    @Test
+    fun updatePost_failsForOthersPostAndBlankText() = runTest {
+        val repository = FakePostRepository()
+        val others = SampleData.posts.first { it.authorId != SampleData.me.id }
+        val mine = SampleData.posts.first { it.authorId == SampleData.me.id }
+
+        assertTrue(repository.updatePost(others.id, "edited").isFailure)
+        assertTrue(repository.updatePost(mine.id, "  ").isFailure)
     }
 
     @Test
