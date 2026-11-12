@@ -2,6 +2,7 @@ package jp.plesion.app
 
 import jp.plesion.app.core.ui.UiState
 import jp.plesion.app.data.local.SampleData
+import jp.plesion.app.feature.feed.detail.CommentInputState
 import jp.plesion.app.feature.feed.detail.PostDetail
 import jp.plesion.app.feature.feed.detail.PostDetailViewModel
 import jp.plesion.app.feature.feed.detail.formatDateTime
@@ -9,9 +10,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -38,6 +43,82 @@ class PostDetailViewModelTest {
         assertEquals(post, detail.post)
         assertEquals(SampleData.comments.filter { it.postId == post.id }, detail.comments)
         assertEquals(1, detail.post.commentCount)
+    }
+
+    @Test
+    fun sendComment_appendsCommentAndClearsInput() {
+        val viewModel = PostDetailViewModel(post.id, TestPostRepository())
+        val before = (viewModel.uiState.value as UiState.Success<PostDetail>).data
+
+        viewModel.onCommentTextChange("いいね")
+        viewModel.sendComment()
+
+        val after = (viewModel.uiState.value as UiState.Success<PostDetail>).data
+        assertEquals(before.comments.size + 1, after.comments.size)
+        assertTrue(after.comments.last().text.endsWith("いいね"))
+        assertEquals(before.post.commentCount + 1, after.post.commentCount)
+        assertEquals(CommentInputState(), viewModel.commentInput.value)
+    }
+
+    @Test
+    fun sendComment_blank_doesNothing() {
+        val viewModel = PostDetailViewModel(post.id, TestPostRepository())
+        val before = viewModel.uiState.value
+
+        viewModel.onCommentTextChange("   ")
+        viewModel.sendComment()
+
+        assertEquals(before, viewModel.uiState.value)
+    }
+
+    @Test
+    fun sendComment_failure_keepsTextAndShowsError() {
+        val repository = TestPostRepository()
+        val viewModel = PostDetailViewModel(post.id, repository)
+        repository.addCommentFailure = RuntimeException("offline")
+
+        viewModel.onCommentTextChange("いいね")
+        viewModel.sendComment()
+
+        assertEquals("いいね", viewModel.commentInput.value.text)
+        assertFalse(viewModel.commentInput.value.isSending)
+        assertNotNull(viewModel.commentInput.value.errorMessage)
+    }
+
+    @Test
+    fun ownPost_canBeEdited() {
+        val mine = SampleData.posts.first { it.authorId == SampleData.me.id }
+        val viewModel = PostDetailViewModel(mine.id, TestPostRepository())
+        assertTrue(viewModel.postAction.value.isMine)
+
+        viewModel.startEdit()
+        assertEquals(mine.text, viewModel.postAction.value.editingText)
+        viewModel.onEditTextChange("編集後")
+        viewModel.saveEdit()
+
+        val detail = (viewModel.uiState.value as UiState.Success<PostDetail>).data
+        assertTrue(detail.post.text.endsWith("編集後"))
+        assertNotNull(detail.post.editedAt)
+        assertNull(viewModel.postAction.value.editingText)
+    }
+
+    @Test
+    fun othersPost_isNotMine() {
+        val others = SampleData.posts.first { it.authorId != SampleData.me.id }
+        val viewModel = PostDetailViewModel(others.id, TestPostRepository())
+        assertFalse(viewModel.postAction.value.isMine)
+    }
+
+    @Test
+    fun deletePost_marksDeleted() = runTest {
+        val repository = TestPostRepository()
+        val mine = SampleData.posts.first { it.authorId == SampleData.me.id }
+        val viewModel = PostDetailViewModel(mine.id, repository)
+
+        viewModel.deletePost()
+
+        assertTrue(viewModel.postAction.value.isDeleted)
+        assertTrue(repository.getPost(mine.id).isFailure)
     }
 
     @Test

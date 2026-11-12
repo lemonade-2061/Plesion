@@ -33,6 +33,7 @@ class TestPostRepository(
     var nearbyFailure: Throwable? = null
     var postFailure: Throwable? = null
     var commentsFailure: Throwable? = null
+    var addCommentFailure: Throwable? = null
     val nearbyCenters = mutableListOf<Pair<GeoPoint, Double>>()
     val createdLocations = mutableListOf<GeoPoint?>()
     /** null 以外なら、検索時点の結果を返す前に完了を待つ（通信中に投稿が増えた状況を作るため）。 */
@@ -49,6 +50,11 @@ class TestPostRepository(
     override suspend fun getPost(postId: String): Result<Post> {
         postFailure?.let { return Result.failure(it) }
         return delegate.getPost(postId)
+    }
+
+    override suspend fun addComment(postId: String, text: String): Result<Comment> {
+        addCommentFailure?.let { return Result.failure(it) }
+        return delegate.addComment(postId, text)
     }
 
     override suspend fun getComments(postId: String): Result<List<Comment>> {
