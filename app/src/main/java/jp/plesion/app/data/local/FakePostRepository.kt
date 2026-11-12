@@ -5,18 +5,13 @@ import jp.plesion.app.data.model.GeoPoint
 import jp.plesion.app.data.model.Post
 import jp.plesion.app.data.remote.filterNearby
 import jp.plesion.app.data.repository.PostRepository
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 /** 【仮実装】メモリ上だけで動く。アプリを再起動すると作成した投稿は消える。 */
 class FakePostRepository : PostRepository {
     private val posts = MutableStateFlow(SampleData.posts)
     private val comments = MutableStateFlow(SampleData.comments)
-
-    override fun observeTimeline(): Flow<List<Post>> =
-        posts.map { list -> list.sortedByDescending { it.createdAt } }
 
     // 画面の動作確認用に、Firestore 実装と同じ絞り込み（距離・位置なし除外・新しい順）だけ再現する
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> =

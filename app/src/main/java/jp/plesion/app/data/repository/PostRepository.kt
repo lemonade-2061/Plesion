@@ -3,13 +3,12 @@ package jp.plesion.app.data.repository
 import jp.plesion.app.data.model.Comment
 import jp.plesion.app.data.model.GeoPoint
 import jp.plesion.app.data.model.Post
-import kotlinx.coroutines.flow.Flow
 
 interface PostRepository {
-    /** タイムライン。新しい順。 */
-    fun observeTimeline(): Flow<List<Post>>
-
-    /** TODO(takuma): 1km 以内の検索。Firestore ではジオハッシュ等の工夫が必要（docs/ROADMAP.md 参照）。 */
+    /**
+     * [center] から [radiusMeters] 以内の投稿。新しい順。
+     * 全件を取るタイムラインは位置情報の公開範囲を超えるので用意しない（DATA_CONTRACT §3）。
+     */
     suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double = 1_000.0): Result<List<Post>>
 
     suspend fun getPost(postId: String): Result<Post>

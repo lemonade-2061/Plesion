@@ -2,27 +2,29 @@ package jp.plesion.app
 
 import jp.plesion.app.data.local.FakePostRepository
 import jp.plesion.app.data.local.SampleData
-import kotlinx.coroutines.flow.first
+import jp.plesion.app.data.model.GeoPoint
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FakePostRepositoryTest {
+    private val center = GeoPoint(35.681236, 139.767125)
+
     @Test
-    fun timeline_isSortedNewestFirst() = runTest {
-        val posts = FakePostRepository().observeTimeline().first()
+    fun nearbyPosts_areSortedNewestFirst() = runTest {
+        val posts = FakePostRepository().getNearbyPosts(center).getOrThrow()
         assertEquals(posts.sortedByDescending { it.createdAt }, posts)
     }
 
     @Test
     fun createPost_addsSampleMarkedPost() = runTest {
         val repository = FakePostRepository()
-        val created = repository.createPost("hello", location = null).getOrThrow()
+        val created = repository.createPost("hello", location = center).getOrThrow()
 
         assertTrue(created.id.startsWith(SampleData.ID_PREFIX))
         assertTrue(created.text.startsWith(SampleData.TEXT_PREFIX))
-        assertTrue(repository.observeTimeline().first().any { it.id == created.id })
+        assertTrue(repository.getNearbyPosts(center).getOrThrow().any { it.id == created.id })
     }
 
     @Test

@@ -14,7 +14,14 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
-      allow read: if signedIn();
+      // 1 件ずつの取得（投稿詳細）はログインしていればできる
+      allow get: if signedIn();
+
+      // 一覧は件数上限付きのクエリだけ。全件をまとめて取られないようにする（DATA_CONTRACT §3）
+      // 閲覧者の現在地はルールから見えないので、「1km 以内だけ」までは強制できない
+      allow list: if signedIn()
+        && request.query.limit != null
+        && request.query.limit <= 100;
 
       // 本人の名前でだけ作れる。createdAt はサーバー時刻、commentCount は 0 から
       // TODO(takuma): 匿名投稿（#20）の isAnonymous と private/owner は、その PR で追加する

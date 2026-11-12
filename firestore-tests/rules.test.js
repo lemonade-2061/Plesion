@@ -10,9 +10,14 @@ import {
   GeoPoint,
   Timestamp,
   deleteDoc,
+  collection,
   doc,
   getDoc,
+  getDocs,
   increment,
+  limit,
+  orderBy,
+  query,
   serverTimestamp,
   setDoc,
   setLogLevel,
@@ -92,6 +97,15 @@ describe('posts', () => {
   test('ログインしていれば読める', async () => {
     await seedPost();
     await assertSucceeds(getDoc(doc(bob(), 'posts', 'p1')));
+  });
+
+  test('一覧は件数上限 100 件以下のクエリだけ取れる', async () => {
+    await seedPost();
+    const posts = collection(bob(), 'posts');
+    await assertSucceeds(getDocs(query(posts, orderBy('geohash'), limit(100))));
+    await assertFails(getDocs(query(posts, orderBy('geohash'), limit(101))));
+    await assertFails(getDocs(query(posts, orderBy('createdAt', 'desc'))));
+    await assertFails(getDocs(query(collection(guest(), 'posts'), limit(10))));
   });
 
   test('本人の名前で作れる', async () => {

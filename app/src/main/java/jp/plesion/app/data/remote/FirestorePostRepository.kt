@@ -12,10 +12,7 @@ import jp.plesion.app.data.model.Post
 import jp.plesion.app.data.repository.PostRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.firestore.GeoPoint as FirestoreGeoPoint
 
@@ -26,20 +23,8 @@ class FirestorePostRepository(
 ) : PostRepository {
     private val posts get() = firestore.collection("posts")
 
-    override fun observeTimeline(): Flow<List<Post>> = callbackFlow {
-        val registration = posts.orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(TIMELINE_LIMIT)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-                if (snapshot != null) trySend(snapshot.documents.mapNotNull { it.toPost() })
-            }
-        awaitClose { registration.remove() }
-    }
-
     // geohash の範囲で候補を取り、実際の距離で radiusMeters 以内に絞る
+    // セキュリティルールが件数上限のない一覧取得を拒否するので、範囲ごとに limit を付ける
     override suspend fun getNearbyPosts(center: GeoPoint, radiusMeters: Double): Result<List<Post>> =
         runCatching {
             val snapshots = coroutineScope {
@@ -48,6 +33,7 @@ class FirestorePostRepository(
                         posts.orderBy("geohash")
                             .startAt(range.start)
                             .endAt(range.end)
+                            .limit(NEARBY_QUERY_LIMIT)
                             .get()
                             .await()
                     }
@@ -152,8 +138,8 @@ class FirestorePostRepository(
     }
 }
 
-/** タイムラインで一度に購読する件数。全件を購読し続けないよう上限を設ける。 */
-private const val TIMELINE_LIMIT = 50L
+/** geohash の範囲 1 つあたりの取得件数。firestore.rules の一覧取得の上限と合わせる。 */
+private const val NEARBY_QUERY_LIMIT = 100L
 
 private const val BATCH_LIMIT = 500
 
