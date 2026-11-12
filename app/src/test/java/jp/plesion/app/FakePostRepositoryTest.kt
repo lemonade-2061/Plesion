@@ -3,8 +3,10 @@ package jp.plesion.app
 import jp.plesion.app.data.local.FakePostRepository
 import jp.plesion.app.data.local.SampleData
 import jp.plesion.app.data.model.GeoPoint
+import jp.plesion.app.data.model.Post
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -25,6 +27,27 @@ class FakePostRepositoryTest {
         assertTrue(created.id.startsWith(SampleData.ID_PREFIX))
         assertTrue(created.text.startsWith(SampleData.TEXT_PREFIX))
         assertTrue(repository.getNearbyPosts(center).getOrThrow().any { it.id == created.id })
+    }
+
+    @Test
+    fun createPost_anonymous_hidesAuthorButIsStillMine() = runTest {
+        val repository = FakePostRepository()
+        val created = repository.createPost("hello", location = center, isAnonymous = true).getOrThrow()
+
+        assertTrue(created.isAnonymous)
+        assertEquals("", created.authorId)
+        assertEquals(Post.ANONYMOUS_NAME, created.authorName)
+        assertTrue(repository.isMyPost(created).getOrThrow())
+    }
+
+    @Test
+    fun isMyPost_isFalseForOthersPosts() = runTest {
+        val repository = FakePostRepository()
+        val others = SampleData.posts.first { it.authorId != SampleData.me.id }
+        val othersAnonymous = others.copy(id = "other-anonymous", authorId = "", isAnonymous = true)
+
+        assertFalse(repository.isMyPost(others).getOrThrow())
+        assertFalse(repository.isMyPost(othersAnonymous).getOrThrow())
     }
 
     @Test

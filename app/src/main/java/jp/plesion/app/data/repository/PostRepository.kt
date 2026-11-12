@@ -13,9 +13,16 @@ interface PostRepository {
 
     suspend fun getPost(postId: String): Result<Post>
 
-    suspend fun createPost(text: String, location: GeoPoint?): Result<Post>
+    /** [isAnonymous] なら投稿者名を「匿名」にし、uid は本人しか読めない場所に保存する（DATA_CONTRACT §4）。 */
+    suspend fun createPost(text: String, location: GeoPoint?, isAnonymous: Boolean = false): Result<Post>
 
     suspend fun deletePost(postId: String): Result<Unit>
+
+    /**
+     * ログイン中のユーザーの投稿か。編集・削除ボタンを出すかの判定に使う。
+     * 匿名投稿は authorId が空なので、画面側で authorId と比べずにこれを使う。
+     */
+    suspend fun isMyPost(post: Post): Result<Boolean>
 
     /** 古い順。 */
     suspend fun getComments(postId: String): Result<List<Comment>>

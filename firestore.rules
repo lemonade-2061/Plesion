@@ -13,6 +13,22 @@ service cloud.firestore {
       return value is string && value.trim().size() > 0 && value.size() <= maxLength;
     }
 
+    function postPath(postId) {
+      return /databases/$(database)/documents/posts/$(postId);
+    }
+
+    // 匿名投稿の本人確認用。uid は本人しか読めない（DATA_CONTRACT §4）
+    function ownerPath(postId) {
+      return /databases/$(database)/documents/posts/$(postId)/private/owner;
+    }
+
+    // 名前つきの投稿は authorId、匿名投稿は private/owner で本人か確かめる
+    // 匿名投稿の authorId は空文字なので、uid と一致することはない
+    function isPostOwner(postId) {
+      return get(postPath(postId)).data.authorId == request.auth.uid
+        || get(ownerPath(postId)).data.uid == request.auth.uid;
+    }
+
     match /posts/{postId} {
       // 1 件ずつの取得（投稿詳細）はログインしていればできる
       allow get: if signedIn();
@@ -23,14 +39,19 @@ service cloud.firestore {
         && request.query.limit != null
         && request.query.limit <= 100;
 
-      // 本人の名前でだけ作れる。createdAt はサーバー時刻、commentCount は 0 から
-      // TODO(takuma): 匿名投稿（#20）の isAnonymous と private/owner は、その PR で追加する
+      // 名前つきは本人の uid で、匿名は uid なし・名前「匿名」で、private/owner を同じバッチで作るときだけ作れる
+      // createdAt はサーバー時刻、commentCount は 0 から
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(
-          ['authorId', 'authorName', 'text', 'imageUrls', 'location', 'geohash', 'createdAt', 'commentCount'])
+          ['authorId', 'authorName', 'isAnonymous', 'text', 'imageUrls', 'location', 'geohash', 'createdAt', 'commentCount'])
         && request.resource.data.keys().hasAll(
-          ['authorId', 'authorName', 'text', 'location', 'geohash', 'createdAt', 'commentCount'])
-        && request.resource.data.authorId == request.auth.uid
+          ['authorId', 'authorName', 'isAnonymous', 'text', 'location', 'geohash', 'createdAt', 'commentCount'])
+        && request.resource.data.isAnonymous is bool
+        && ((!request.resource.data.isAnonymous && request.resource.data.authorId == request.auth.uid)
+          || (request.resource.data.isAnonymous
+            && request.resource.data.authorId == ''
+            && request.resource.data.authorName == '匿名'
+            && getAfter(ownerPath(postId)).data.uid == request.auth.uid))
         && request.resource.data.authorName is string
         && isText(request.resource.data.text, 500)
         && (!('imageUrls' in request.resource.data)
@@ -45,7 +66,26 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
         && request.resource.data.commentCount == resource.data.commentCount + 1;
 
-      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+      allow delete: if signedIn() && isPostOwner(postId);
+
+      match /private/{docId} {
+        allow get: if signedIn() && docId == 'owner' && resource.data.uid == request.auth.uid;
+
+        // 匿名投稿を作るバッチの中でだけ作れる。既存の投稿に後から付けて削除権限を奪うのを防ぐ
+        allow create: if signedIn()
+          && docId == 'owner'
+          && request.resource.data.keys().hasOnly(['uid'])
+          && request.resource.data.uid == request.auth.uid
+          && !exists(postPath(postId))
+          && getAfter(postPath(postId)).data.isAnonymous == true;
+
+        allow update: if false;
+
+        // 投稿と同じバッチでだけ消せる（owner だけ消すと、誰も投稿を消せなくなるため）
+        allow delete: if signedIn()
+          && resource.data.uid == request.auth.uid
+          && !existsAfter(postPath(postId));
+      }
 
       match /comments/{commentId} {
         allow read: if signedIn();
@@ -65,8 +105,7 @@ service cloud.firestore {
         allow update: if false;
 
         // 投稿の削除時に、投稿者がコメントもまとめて消す
-        allow delete: if signedIn()
-          && get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid;
+        allow delete: if signedIn() && isPostOwner(postId);
       }
     }
 
