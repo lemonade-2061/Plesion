@@ -1,5 +1,6 @@
 package jp.plesion.app
 
+import android.net.Uri
 import jp.plesion.app.core.location.LocationProvider
 import jp.plesion.app.data.local.FakePostRepository
 import jp.plesion.app.data.model.Comment
@@ -55,8 +56,13 @@ class TestPostRepository(
         return delegate.getComments(postId)
     }
 
-    override suspend fun createPost(text: String, location: GeoPoint?, isAnonymous: Boolean): Result<Post> {
+    override suspend fun createPost(
+        text: String,
+        location: GeoPoint?,
+        isAnonymous: Boolean,
+        imageUris: List<Uri>,
+    ): Result<Post> {
         createdLocations += location
-        return delegate.createPost(text, location, isAnonymous)
+        return delegate.createPost(text, location, isAnonymous, imageUris)
     }
 }

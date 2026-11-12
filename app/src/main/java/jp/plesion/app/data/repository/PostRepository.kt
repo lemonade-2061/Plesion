@@ -1,5 +1,6 @@
 package jp.plesion.app.data.repository
 
+import android.net.Uri
 import jp.plesion.app.data.model.Comment
 import jp.plesion.app.data.model.GeoPoint
 import jp.plesion.app.data.model.Post
@@ -13,8 +14,16 @@ interface PostRepository {
 
     suspend fun getPost(postId: String): Result<Post>
 
-    /** [isAnonymous] なら投稿者名を「匿名」にし、uid は本人しか読めない場所に保存する（DATA_CONTRACT §4）。 */
-    suspend fun createPost(text: String, location: GeoPoint?, isAnonymous: Boolean = false): Result<Post>
+    /**
+     * [isAnonymous] なら投稿者名を「匿名」にし、uid は本人しか読めない場所に保存する（DATA_CONTRACT §4）。
+     * [imageUris] は Photo Picker で選んだ画像（[Post.MAX_IMAGES] 枚まで）。縮小・位置情報の削除・アップロードはここで行う。
+     */
+    suspend fun createPost(
+        text: String,
+        location: GeoPoint?,
+        isAnonymous: Boolean = false,
+        imageUris: List<Uri> = emptyList(),
+    ): Result<Post>
 
     suspend fun deletePost(postId: String): Result<Unit>
 

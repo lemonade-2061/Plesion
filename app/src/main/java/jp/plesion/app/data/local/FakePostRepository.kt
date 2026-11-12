@@ -1,5 +1,6 @@
 package jp.plesion.app.data.local
 
+import android.net.Uri
 import jp.plesion.app.data.model.Comment
 import jp.plesion.app.data.model.GeoPoint
 import jp.plesion.app.data.model.Post
@@ -25,14 +26,22 @@ class FakePostRepository : PostRepository {
         return Result.success(post)
     }
 
-    override suspend fun createPost(text: String, location: GeoPoint?, isAnonymous: Boolean): Result<Post> {
+    // 画像はアップロードせず、選んだ画像の Uri をそのまま URL として持つ（端末内でだけ表示できる）
+    override suspend fun createPost(
+        text: String,
+        location: GeoPoint?,
+        isAnonymous: Boolean,
+        imageUris: List<Uri>,
+    ): Result<Post> {
         if (text.isBlank()) return Result.failure(IllegalArgumentException("Post text is blank"))
+        if (imageUris.size > Post.MAX_IMAGES) return Result.failure(IllegalArgumentException("Too many images"))
         val post = Post(
             id = "${SampleData.ID_PREFIX}post-${UUID.randomUUID()}",
             authorId = if (isAnonymous) "" else SampleData.me.id,
             authorName = if (isAnonymous) Post.ANONYMOUS_NAME else SampleData.me.displayName,
             isAnonymous = isAnonymous,
             text = "${SampleData.TEXT_PREFIX} $text",
+            imageUrls = imageUris.map { it.toString() },
             location = location,
             createdAt = System.currentTimeMillis(),
         )

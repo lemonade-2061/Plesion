@@ -20,7 +20,7 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 | `authorName` | string | `authorName` | ○ | 表示名。匿名投稿では `"匿名"` |
 | `isAnonymous` | bool | `isAnonymous` | ○ | 匿名投稿か。この項目がない古い投稿は `false` として扱う |
 | `text` | string | `text` | ○ | 本文。1〜500 文字 |
-| `imageUrls` | array\<string\> | `imageUrls` | − | Storage のダウンロード URL。最大 4 枚 |
+| `imageUrls` | array\<string\> | `imageUrls` | − | Storage のダウンロード URL。最大 4 枚。画像は `posts/{postId}/images/{0〜3}.jpg`（§4） |
 | `location` | geopoint | `location: GeoPoint?` | ○ | 投稿位置（§4 の丸め後の値）。Kotlin では null 可だが、`createPost` は null なら失敗を返す |
 | `geohash` | string | （remote 層のみ） | ○ | 1km 検索用。Android の画面側では使わない |
 | `createdAt` | timestamp | `createdAt: Long` | ○ | サーバー時刻（`FieldValue.serverTimestamp()`） |
@@ -58,8 +58,11 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 3. **位置を丸める。** すべての投稿で、保存前に緯度経度を小数第3位（約100m）に丸める。自宅などの特定を防ぐため。
    検索用と公開用の位置は分けず、丸めた位置（`location` と、そこから計算した `geohash`）だけを保存する。丸める前の位置はどこにも保存しない（#27）。
 4. **距離は段階で表示する。** 画面には「100m以内 / 300m以内 / 500m以内 / 1km以内」だけを出し、細かい距離は出さない。場所を変えて何度も見ることで投稿位置を絞り込まれにくくするため（#27）。
-5. **ログに出さない。** uid・位置・本文を `Log` や Crashlytics に出力しない。
-6. **仮データでも実在の人名・住所を使わない。**
+5. **画像の位置情報を消す。** 写真の EXIF には撮影場所（GPS）が正確に入っているので、`createPost` が端末で再エンコード（長い辺 1600px・JPEG）してからアップロードする。画面側で画像のバイト列を直接アップロードしない（#18）。
+   Storage のパスには uid を入れない（ダウンロード URL にパスが含まれ、匿名投稿の投稿者が分かってしまうため）。
+   - **限界**: 画像は投稿を作る前にアップロードするため、ログインしていれば未使用の postId に画像を置けてしまう（1 枚 2MB・4 枚まで）。完全に防ぐには Cloud Functions が必要で、今回は予算アラートで監視する。
+6. **ログに出さない。** uid・位置・本文を `Log` や Crashlytics に出力しない。
+7. **仮データでも実在の人名・住所を使わない。**
 
 ## 5. 変更履歴
 
@@ -69,3 +72,4 @@ Android（tanabe / tajima）と Firebase（takuma）の間の「約束事」で�
 | 2026-10-30 | 本文の上限（500 文字）と画像の上限（4 枚）を確定。`location` は null 可の型のまま `createPost` で必須チェックすることに決定（#6） |
 | 2026-11-10 | タイムライン（全件取得）を廃止し、投稿の一覧取得を件数上限付きに制限（#26）。位置の扱いと距離の段階表示を確定（#27） |
 | 2026-11-12 | `isAnonymous` を追加。匿名投稿の `private/owner` の作成・削除ルールと `isMyPost` を確定（#19） |
+| 2026-11-12 | 画像の保存場所・アップロード手順・Storage のルールを確定（#18） |

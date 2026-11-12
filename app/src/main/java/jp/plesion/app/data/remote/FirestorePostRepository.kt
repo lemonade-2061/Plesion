@@ -1,5 +1,6 @@
 package jp.plesion.app.data.remote
 
+import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -7,6 +8,11 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageException
+import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.storageMetadata
+import jp.plesion.app.core.image.ImageCompressor
 import jp.plesion.app.core.location.GeoUtils
 import jp.plesion.app.data.model.Comment
 import jp.plesion.app.data.model.GeoPoint
@@ -20,10 +26,18 @@ import com.google.firebase.firestore.GeoPoint as FirestoreGeoPoint
 
 /** Firestore の `posts` コレクションを使う実装。項目は docs/DATA_CONTRACT.md §2 に合わせる。 */
 class FirestorePostRepository(
+    private val imageCompressor: ImageCompressor,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
 ) : PostRepository {
     private val posts get() = firestore.collection("posts")
+
+    private val jpegMetadata = storageMetadata { contentType = "image/jpeg" }
+
+    // パスに uid を入れない。ダウンロード URL にパスが含まれ、匿名投稿の投稿者が分かってしまうため（DATA_CONTRACT §4）
+    private fun DocumentReference.imageRef(index: Int): StorageReference =
+        storage.reference.child("posts/$id/images/$index.jpg")
 
     // geohash の範囲で候補を取り、実際の距離で radiusMeters 以内に絞る
     // セキュリティルールが件数上限のない一覧取得を拒否するので、範囲ごとに limit を付ける
@@ -56,15 +70,30 @@ class FirestorePostRepository(
 
     // 位置は GeoUtils.round で丸めてから保存し、geohash も丸めた位置から計算する（DATA_CONTRACT §4）
     // 匿名投稿は投稿に uid を入れず、private/owner に置く。セキュリティルールが同じバッチで作ることを求める
-    override suspend fun createPost(text: String, location: GeoPoint?, isAnonymous: Boolean): Result<Post> =
-        runCatching {
-            validatePostText(text)
-            requireNotNull(location) { "Post location is required" }
-            val user = auth.currentUser ?: error("Not signed in")
-            val rounded = GeoUtils.round(location)
-            val authorId = if (isAnonymous) "" else user.uid
-            val authorName = if (isAnonymous) Post.ANONYMOUS_NAME else user.displayName.orEmpty()
-            val document = posts.document()
+    // 画像は投稿より先にアップロードする（Storage のルールが、投稿がまだないときだけ追加を認めるため）
+    override suspend fun createPost(
+        text: String,
+        location: GeoPoint?,
+        isAnonymous: Boolean,
+        imageUris: List<Uri>,
+    ): Result<Post> = runCatching {
+        validatePostText(text)
+        requireNotNull(location) { "Post location is required" }
+        require(imageUris.size <= Post.MAX_IMAGES) { "Too many images" }
+        val user = auth.currentUser ?: error("Not signed in")
+        val rounded = GeoUtils.round(location)
+        val authorId = if (isAnonymous) "" else user.uid
+        val authorName = if (isAnonymous) Post.ANONYMOUS_NAME else user.displayName.orEmpty()
+        val document = posts.document()
+        val uploaded = mutableListOf<StorageReference>()
+        try {
+            val imageUrls = imageUris.mapIndexed { index, uri ->
+                val bytes = imageCompressor.compress(uri).getOrThrow()
+                val ref = document.imageRef(index)
+                ref.putBytes(bytes, jpegMetadata).await()
+                uploaded += ref
+                ref.downloadUrl.await().toString()
+            }
             firestore.batch().apply {
                 set(
                     document,
@@ -73,7 +102,7 @@ class FirestorePostRepository(
                         "authorName" to authorName,
                         "isAnonymous" to isAnonymous,
                         "text" to text,
-                        "imageUrls" to emptyList<String>(),
+                        "imageUrls" to imageUrls,
                         "location" to FirestoreGeoPoint(rounded.latitude, rounded.longitude),
                         "geohash" to GeoUtils.geohash(rounded),
                         "createdAt" to FieldValue.serverTimestamp(),
@@ -89,16 +118,33 @@ class FirestorePostRepository(
                 authorName = authorName,
                 isAnonymous = isAnonymous,
                 text = text,
+                imageUrls = imageUrls,
                 location = rounded,
                 createdAt = System.currentTimeMillis(),
             )
+        } catch (e: Exception) {
+            // 投稿を作れなかったときは、アップロード済みの画像を残さない（失敗しても投稿の失敗だけを返す）
+            uploaded.forEach { runCatching { it.delete().await() } }
+            throw e
         }
+    }
 
     // コメントのサブコレクションは投稿を消しても残るので、先に消してから投稿を消す
     // private/owner は投稿と同じバッチでしか消せない（セキュリティルール）
+    // 画像は Storage のルールが投稿の持ち主を確かめるので、投稿を消す前に消す
     override suspend fun deletePost(postId: String): Result<Unit> = runCatching {
         val post = posts.document(postId)
-        val isAnonymous = post.get().await().getBoolean("isAnonymous") == true
+        val snapshot = post.get().await()
+        val isAnonymous = snapshot.getBoolean("isAnonymous") == true
+        val imageCount = (snapshot.get("imageUrls") as? List<*>)?.size ?: 0
+        repeat(imageCount) { index ->
+            try {
+                post.imageRef(index).delete().await()
+            } catch (e: StorageException) {
+                // 途中で失敗して消し直す場合など、すでにないものは無視する
+                if (e.errorCode != StorageException.ERROR_OBJECT_NOT_FOUND) throw e
+            }
+        }
         val comments = post.collection("comments").get().await()
         // 1 回のバッチは 500 件まで。最後のバッチで投稿と private/owner も消す
         val chunks = comments.documents.chunked(BATCH_LIMIT - 2)
