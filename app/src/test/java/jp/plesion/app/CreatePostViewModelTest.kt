@@ -56,6 +56,16 @@ class CreatePostViewModelTest {
     }
 
     @Test
+    fun submit_passesAnonymousChoiceToRepository() {
+        val repository = TestPostRepository()
+        val viewModel = CreatePostViewModel(repository, TestLocationProvider())
+        viewModel.onTextChange("テスト投稿")
+        viewModel.onAnonymousChange(true)
+        viewModel.submit()
+        assertEquals(listOf(true), repository.createdAnonymous)
+    }
+
+    @Test
     fun submit_withoutPermission_doesNotPost() {
         val repository = TestPostRepository()
         val viewModel = CreatePostViewModel(repository, TestLocationProvider(Result.failure(LocationPermissionDeniedException())))

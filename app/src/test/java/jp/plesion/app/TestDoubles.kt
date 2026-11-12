@@ -36,6 +36,7 @@ class TestPostRepository(
     var addCommentFailure: Throwable? = null
     val nearbyCenters = mutableListOf<Pair<GeoPoint, Double>>()
     val createdLocations = mutableListOf<GeoPoint?>()
+    val createdAnonymous = mutableListOf<Boolean>()
     /** null 以外なら、検索時点の結果を返す前に完了を待つ（通信中に投稿が増えた状況を作るため）。 */
     var nearbyGate: CompletableDeferred<Unit>? = null
 
@@ -69,6 +70,7 @@ class TestPostRepository(
         imageUris: List<Uri>,
     ): Result<Post> {
         createdLocations += location
+        createdAnonymous += isAnonymous
         return delegate.createPost(text, location, isAnonymous, imageUris)
     }
 }

@@ -16,6 +16,7 @@ const val MAX_POST_LENGTH = 500
 
 data class CreatePostUiState(
     val text: String = "",
+    val isAnonymous: Boolean = false,
     val isSubmitting: Boolean = false,
     val isLocating: Boolean = false,
     val isPosted: Boolean = false,
@@ -34,6 +35,10 @@ class CreatePostViewModel(
         _uiState.update { it.copy(text = text.take(MAX_POST_LENGTH), errorMessage = null) }
     }
 
+    fun onAnonymousChange(isAnonymous: Boolean) {
+        _uiState.update { it.copy(isAnonymous = isAnonymous) }
+    }
+
     // TODO(tajima): 画像添付を追加する
     fun submit() {
         // 連打で二重投稿しないよう、送信中は受け付けない
@@ -48,7 +53,8 @@ class CreatePostViewModel(
                 return@launch
             }
             _uiState.update { it.copy(isLocating = false) }
-            postRepository.createPost(_uiState.value.text, location)
+            val state = _uiState.value
+            postRepository.createPost(state.text, location, isAnonymous = state.isAnonymous)
                 .onSuccess { _uiState.update { it.copy(isSubmitting = false, isPosted = true) } }
                 .onFailure { e ->
                     _uiState.update { it.copy(isSubmitting = false, errorMessage = e.message) }

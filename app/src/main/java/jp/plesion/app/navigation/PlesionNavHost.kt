@@ -1,6 +1,11 @@
 package jp.plesion.app.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -8,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -33,13 +39,14 @@ import jp.plesion.app.feature.post.CreatePostViewModel
 import jp.plesion.app.feature.profile.ProfileScreen
 import jp.plesion.app.feature.profile.ProfileViewModel
 import jp.plesion.app.feature.settings.SettingsScreen
+import jp.plesion.app.feature.settings.SettingsViewModel
 
-private data class BottomTab(val route: String, val label: String)
+private data class BottomTab(val route: String, val label: String, val icon: ImageVector)
 
 private val bottomTabs = listOf(
-    BottomTab(Routes.HOME, "ホーム"),
-    BottomTab(Routes.CREATE_POST, "投稿"),
-    BottomTab(Routes.PROFILE, "プロフィール"),
+    BottomTab(Routes.HOME, "ホーム", Icons.Default.Home),
+    BottomTab(Routes.CREATE_POST, "投稿", Icons.Default.AddCircle),
+    BottomTab(Routes.PROFILE, "プロフィール", Icons.Default.Person),
 )
 
 @Composable
@@ -58,7 +65,7 @@ fun PlesionNavHost(
                         NavigationBarItem(
                             selected = currentRoute == tab.route,
                             onClick = { navController.navigateToTab(tab.route) },
-                            icon = {}, // TODO(tanabe): アイコンを決める
+                            icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(tab.label) },
                         )
                     }
@@ -119,16 +126,32 @@ fun PlesionNavHost(
                     onBack = { navController.navigateToTab(Routes.HOME) },
                 )
             }
-            composable(Routes.PROFILE) {
+            composable(Routes.PROFILE) { entry ->
                 ProfileScreen(
                     viewModel = viewModel(factory = viewModelFactory {
-                        initializer { ProfileViewModel(container.userRepository, container.authRepository) }
+                        initializer {
+                            ProfileViewModel(container.userRepository, container.authRepository, container.postRepository)
+                        }
                     }),
-                    onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                    onOpenSettings = { if (entry.isResumed()) navController.navigate(Routes.SETTINGS) },
+                    onPostClick = { postId ->
+                        if (entry.isResumed()) navController.navigate(Routes.postDetail(postId))
+                    },
                 )
             }
-            composable(Routes.SETTINGS) {
-                SettingsScreen()
+            composable(Routes.SETTINGS) { entry ->
+                SettingsScreen(
+                    viewModel = viewModel(factory = viewModelFactory {
+                        initializer { SettingsViewModel(container.authRepository) }
+                    }),
+                    onSignedOut = {
+                        // 戻るボタンでログイン後の画面に戻れないよう、スタックを全部消す
+                        navController.navigate(Routes.LOGIN) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
+                    onBack = { if (entry.isResumed()) navController.popBackStack() },
+                )
             }
         }
     }
