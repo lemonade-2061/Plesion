@@ -2,6 +2,7 @@ package jp.plesion.app.feature.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.plesion.app.core.ui.UiStateContent
 
@@ -59,6 +61,7 @@ data class ProfilePostUi(
     val body: String,
     val timeAgo: String,
     val commentCount: Int,
+    val isAnonymous: Boolean = false,
 )
 
 @Composable
@@ -66,8 +69,16 @@ fun ProfileScreen(
     viewModel: ProfileViewModel,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    onPostClick: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val posts by viewModel.posts.collectAsStateWithLifecycle()
+
+    // 詳細で編集・削除して戻ってきたときに、一覧を新しくする
+    LifecycleResumeEffect(Unit) {
+        viewModel.loadPosts()
+        onPauseOrDispose {}
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -87,9 +98,9 @@ fun ProfileScreen(
                     ProfileContent(
                         displayName = user.displayName,
                         bio = user.bio,
-                        // TODO: 自分の投稿を取得できるようになったら、ProfilePostUi のリストを渡す
-                        //       （null のあいだは「自分の投稿」の欄ごと表示しない）
-                        posts = null,
+                        // null のあいだ（読み込み中・失敗）は「自分の投稿」の欄ごと表示しない
+                        posts = posts,
+                        onPostClick = onPostClick,
                     )
                 }
             }
@@ -103,6 +114,7 @@ fun ProfileContent(
     bio: String,
     posts: List<ProfilePostUi>?,
     modifier: Modifier = Modifier,
+    onPostClick: (String) -> Unit = {},
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -130,7 +142,7 @@ fun ProfileContent(
                     )
                 }
             }
-            items(posts, key = { it.id }) { post -> MyPostCard(post) }
+            items(posts, key = { it.id }) { post -> MyPostCard(post, onClick = { onPostClick(post.id) }) }
         }
     }
 }
@@ -222,12 +234,14 @@ private fun ProfileHeader(displayName: String, bio: String) {
 }
 
 @Composable
-private fun MyPostCard(post: ProfilePostUi) {
+private fun MyPostCard(post: ProfilePostUi, onClick: () -> Unit) {
     Column(
         Modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .fillMaxWidth()
-            .background(CardPurple, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardPurple)
+            .clickable(onClick = onClick)
             .padding(14.dp),
     ) {
         Text(
@@ -239,7 +253,11 @@ private fun MyPostCard(post: ProfilePostUi) {
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(4.dp))
-        Text(post.timeAgo, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+        Text(
+            if (post.isAnonymous) "${post.timeAgo}・匿名で投稿" else post.timeAgo,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 10.sp,
+        )
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(

@@ -2,6 +2,7 @@ package jp.plesion.app
 
 import jp.plesion.app.core.ui.UiState
 import jp.plesion.app.data.local.FakeAuthRepository
+import jp.plesion.app.data.local.FakePostRepository
 import jp.plesion.app.data.local.FakeUserRepository
 import jp.plesion.app.data.local.SampleData
 import jp.plesion.app.feature.profile.ProfileViewModel
@@ -32,13 +33,21 @@ class ProfileViewModelTest {
     @Test
     fun load_showsSignedInUser() = runTest {
         val auth = FakeAuthRepository().apply { signInWithGoogle("token") }
-        val viewModel = ProfileViewModel(FakeUserRepository(), auth)
+        val viewModel = ProfileViewModel(FakeUserRepository(), auth, FakePostRepository())
         assertEquals(UiState.Success(SampleData.me), viewModel.uiState.value)
     }
 
     @Test
+    fun load_showsMyPostsOnly() = runTest {
+        val auth = FakeAuthRepository().apply { signInWithGoogle("token") }
+        val viewModel = ProfileViewModel(FakeUserRepository(), auth, FakePostRepository())
+        val myPostIds = SampleData.posts.filter { it.authorId == SampleData.me.id }.map { it.id }
+        assertEquals(myPostIds, viewModel.posts.value?.map { it.id })
+    }
+
+    @Test
     fun load_notSignedIn_showsError() {
-        val viewModel = ProfileViewModel(FakeUserRepository(), FakeAuthRepository())
+        val viewModel = ProfileViewModel(FakeUserRepository(), FakeAuthRepository(), FakePostRepository())
         assertTrue(viewModel.uiState.value is UiState.Error)
     }
 }

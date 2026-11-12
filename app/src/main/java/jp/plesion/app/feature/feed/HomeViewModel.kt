@@ -86,7 +86,7 @@ private fun Post.toFeedPost(center: GeoPoint): FeedPost = FeedPost(
 )
 
 /** エポックミリ秒から「たった今 / 〇分前 / 〇時間前 / 〇日前」を作る。 */
-private fun formatTimeAgo(createdAtMillis: Long): String {
+internal fun formatTimeAgo(createdAtMillis: Long): String {
     val diffMillis = (System.currentTimeMillis() - createdAtMillis).coerceAtLeast(0L)
     val minutes = diffMillis / 60_000L
     return when {

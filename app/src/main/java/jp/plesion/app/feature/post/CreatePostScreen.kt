@@ -64,7 +64,7 @@ private val AccentDark = Color(0xFF9B1FC0)
 private val ErrorText = Color(0xFFFFB4AB)
 
 /**
- * 画像・カテゴリー・終了日時・名前/匿名の切り替えは、保存先（PostRepository.createPost）がまだ対応していない。
+ * 画像・カテゴリー・終了日時は、保存先（PostRepository.createPost）がまだ対応していない。
  * 押せるのに保存されない状態をユーザーに見せないよう、対応するまでは false にして隠す。
  * 対応したら true にして、ViewModel と合わせて実際の処理につなぐ。
  */
@@ -93,10 +93,12 @@ fun CreatePostScreen(
     LocationPermissionGate(modifier = modifier) {
         CreatePostContent(
             text = state.text,
+            isAnonymous = state.isAnonymous,
             isLocating = state.isLocating,
             isSubmitting = state.isSubmitting,
             errorMessage = state.errorMessage,
             onTextChange = viewModel::onTextChange,
+            onAnonymousChange = viewModel::onAnonymousChange,
             onSubmit = viewModel::submit,
             onBack = onBack,
             modifier = Modifier.fillMaxSize(),
@@ -107,17 +109,18 @@ fun CreatePostScreen(
 @Composable
 fun CreatePostContent(
     text: String,
+    isAnonymous: Boolean,
     isLocating: Boolean,
     isSubmitting: Boolean,
     errorMessage: String?,
     onTextChange: (String) -> Unit,
+    onAnonymousChange: (Boolean) -> Unit,
     onSubmit: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     nickname: String? = null, // ユーザー情報を取れるようになったら渡す
 ) {
     // SHOW_UNSUPPORTED_SECTIONS が true のときだけ使う、見た目だけの状態
-    var anonymous by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -163,16 +166,14 @@ fun CreatePostContent(
                     Text(nickname, color = Color.White, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.weight(1f))
-                if (SHOW_UNSUPPORTED_SECTIONS) {
-                    Text(
-                        "投稿者の表示方法",
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    DisplayModeToggle(anonymous = anonymous, onChange = { anonymous = it })
-                }
+                Text(
+                    "投稿者の表示方法",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.width(8.dp))
+                DisplayModeToggle(anonymous = isAnonymous, onChange = onAnonymousChange)
             }
             Spacer(Modifier.height(8.dp))
 
@@ -394,10 +395,12 @@ private fun SubmitButton(enabled: Boolean, loading: Boolean, onClick: () -> Unit
 private fun CreatePostContentPreview() {
     CreatePostContent(
         text = "",
+        isAnonymous = false,
         isLocating = false,
         isSubmitting = false,
         errorMessage = null,
         onTextChange = {},
+        onAnonymousChange = {},
         onSubmit = {},
         onBack = {},
     )
