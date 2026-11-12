@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,13 +22,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import jp.plesion.app.core.ui.UiState
 import jp.plesion.app.core.ui.UiStateContent
 import jp.plesion.app.data.model.Comment
 import java.time.Instant
@@ -47,6 +54,7 @@ private val BgPurple = Color(0xFF42145F)
 private val CardPurple = Color(0xFFA060B0)
 private val AvatarPurple = Color(0xFF7B3A8C)
 private val CommentGray = Color(0xFFD9D9D9)
+private val ErrorText = Color(0xFFFFB4AB)
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")
 
@@ -60,13 +68,15 @@ fun PostDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val commentInput by viewModel.commentInput.collectAsStateWithLifecycle()
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = BgPurple,
         contentColor = Color.White,
     ) {
-        Column(Modifier.fillMaxSize()) {
+        // キーボードが出たときに入力欄が隠れないよう、画面全体をキーボードの上に収める
+        Column(Modifier.fillMaxSize().imePadding()) {
             DetailTopBar(onBack = onBack)
 
             // 上バーの下の残り全部を、読み込み中・エラー・一覧の表示に使う
@@ -162,6 +172,64 @@ fun PostDetailScreen(
                             CommentItem(comment)
                         }
                     }
+                }
+            }
+
+            // 投稿を読み込めたときだけ、コメントを書ける
+            if (state is UiState.Success) {
+                CommentInputBar(
+                    input = commentInput,
+                    onTextChange = viewModel::onCommentTextChange,
+                    onSend = viewModel::sendComment,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentInputBar(
+    input: CommentInputState,
+    onTextChange: (String) -> Unit,
+    onSend: () -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(BgPurple)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        input.errorMessage?.let {
+            Text(it, color = ErrorText, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 4.dp))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextField(
+                value = input.text,
+                onValueChange = onTextChange,
+                placeholder = { Text("コメントを書く", color = Color.White.copy(alpha = 0.6f)) },
+                maxLines = 4,
+                shape = RoundedCornerShape(24.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = CardPurple,
+                    unfocusedContainerColor = CardPurple,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    cursorColor = Color.White,
+                ),
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            if (input.isSending) {
+                CircularProgressIndicator(Modifier.size(24.dp).padding(2.dp), color = Color.White, strokeWidth = 2.dp)
+            } else {
+                IconButton(onClick = onSend, enabled = input.text.isNotBlank()) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "コメントを送信",
+                        tint = if (input.text.isNotBlank()) Color.White else Color.White.copy(alpha = 0.4f),
+                    )
                 }
             }
         }
