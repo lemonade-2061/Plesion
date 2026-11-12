@@ -11,6 +11,7 @@ import jp.plesion.app.data.remote.filterNearby
 import jp.plesion.app.data.repository.PostRepository
 import jp.plesion.app.feature.feed.FeedPost
 import jp.plesion.app.feature.feed.HomeViewModel
+import jp.plesion.app.feature.feed.formatDistance
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -191,5 +192,14 @@ class HomeViewModelTest {
         viewModel.refresh()
 
         assertEquals(created.id, viewModel.posts().first().id)
+    }
+
+    @Test
+    fun distance_isShownInCoarseSteps() {
+        assertEquals("100m以内", formatDistance(0.0))
+        assertEquals("100m以内", formatDistance(100.0))
+        assertEquals("300m以内", formatDistance(101.0))
+        assertEquals("500m以内", formatDistance(450.0))
+        assertEquals("1km以内", formatDistance(999.0))
     }
 }

@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 /** ホームは現在地から半径 1km 以内の投稿だけを新しい順に表示する。 */
 const val NEARBY_RADIUS_METERS = 1_000.0
@@ -98,8 +97,13 @@ private fun formatTimeAgo(createdAtMillis: Long): String {
     }
 }
 
-/** 10m 単位に丸めて「〇〇m」にする。 */
-private fun formatDistance(meters: Double): String {
-    val rounded = (meters / 10.0).roundToInt() * 10
-    return "${rounded}m"
+/**
+ * 「100m以内 / 300m以内 / 500m以内 / 1km以内」の段階で表す。
+ * 細かい距離を出すと、場所を変えて何度か見ることで投稿位置を絞り込めてしまうため（DATA_CONTRACT §4）。
+ */
+internal fun formatDistance(meters: Double): String = when {
+    meters <= 100.0 -> "100m以内"
+    meters <= 300.0 -> "300m以内"
+    meters <= 500.0 -> "500m以内"
+    else -> "1km以内"
 }

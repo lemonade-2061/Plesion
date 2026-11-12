@@ -7,7 +7,7 @@ interface AuthRepository {
     /** ログイン中のユーザー。未ログインなら null。 */
     val currentUser: Flow<User?>
 
-    /** TODO(takuma): Firebase Authentication（Google）で実装する。 */
+    /** Google の ID トークンで Firebase Authentication にログインする。 */
     suspend fun signInWithGoogle(idToken: String): Result<User>
 
     suspend fun signOut()
