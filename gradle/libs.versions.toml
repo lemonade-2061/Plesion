@@ -1,6 +1,7 @@
 # 依存ライブラリのバージョンはここで一元管理する。
 # 更新する場合は PR で理由を書き、assembleDebug / testDebugUnitTest が通ることを確認すること。
 [versions]
+coil = "2.7.0"
 agp = "8.13.2"
 kotlin = "2.3.21"
 googleServices = "4.5.0"
@@ -41,6 +42,7 @@ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.r
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }

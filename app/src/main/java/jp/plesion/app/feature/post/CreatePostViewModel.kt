@@ -1,9 +1,11 @@
 package jp.plesion.app.feature.post
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jp.plesion.app.core.location.LocationProvider
 import jp.plesion.app.core.location.toLocationErrorMessage
+import jp.plesion.app.data.model.Post
 import jp.plesion.app.data.repository.PostRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +19,8 @@ const val MAX_POST_LENGTH = 500
 data class CreatePostUiState(
     val text: String = "",
     val isAnonymous: Boolean = false,
+    /** Photo Picker で選んだ画像。縮小・アップロードは PostRepository が行う。 */
+    val imageUris: List<Uri> = emptyList(),
     val isSubmitting: Boolean = false,
     val isLocating: Boolean = false,
     val isPosted: Boolean = false,
@@ -39,7 +43,17 @@ class CreatePostViewModel(
         _uiState.update { it.copy(isAnonymous = isAnonymous) }
     }
 
-    // TODO(tajima): 画像添付を追加する
+    /** 上限（[Post.MAX_IMAGES] 枚）を超えた分は捨てる。 */
+    fun onImagesPicked(uris: List<Uri>) {
+        _uiState.update { state ->
+            state.copy(imageUris = (state.imageUris + uris).distinct().take(Post.MAX_IMAGES), errorMessage = null)
+        }
+    }
+
+    fun onImageRemoved(uri: Uri) {
+        _uiState.update { it.copy(imageUris = it.imageUris - uri) }
+    }
+
     fun submit() {
         // 連打で二重投稿しないよう、送信中は受け付けない
         if (_uiState.value.isSubmitting) return
@@ -54,7 +68,7 @@ class CreatePostViewModel(
             }
             _uiState.update { it.copy(isLocating = false) }
             val state = _uiState.value
-            postRepository.createPost(state.text, location, isAnonymous = state.isAnonymous)
+            postRepository.createPost(state.text, location, isAnonymous = state.isAnonymous, imageUris = state.imageUris)
                 .onSuccess { _uiState.update { it.copy(isSubmitting = false, isPosted = true) } }
                 .onFailure { e ->
                     _uiState.update { it.copy(isSubmitting = false, errorMessage = e.message) }

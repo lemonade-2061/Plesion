@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.plesion.app.core.ui.LocationPermissionGate
+import jp.plesion.app.core.ui.PostImages
 import jp.plesion.app.core.ui.UiStateContent
 import androidx.compose.material3.Surface
 
@@ -182,6 +183,10 @@ private fun PostBubble(post: FeedPost) {
             fontWeight = FontWeight.Bold,
             lineHeight = 20.sp,
         )
+        if (post.imageUrls.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            PostImages(post.imageUrls)
+        }
         Spacer(Modifier.height(12.dp))
         Row(
             Modifier.fillMaxWidth(),
