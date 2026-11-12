@@ -28,6 +28,9 @@ interface PostRepository {
         imageUris: List<Uri> = emptyList(),
     ): Result<Post>
 
+    /** 本文だけ編集できる（画像・位置・匿名かどうかは変えられない）。投稿者以外は失敗する。編集後の投稿を返す。 */
+    suspend fun updatePost(postId: String, text: String): Result<Post>
+
     suspend fun deletePost(postId: String): Result<Unit>
 
     /**

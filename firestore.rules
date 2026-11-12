@@ -65,10 +65,17 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.commentCount == 0;
 
-      // 本文などの編集はまだない（#16）。コメント追加時の commentCount + 1 だけ認める
+      // コメント追加時の commentCount + 1 は誰でもできる
       allow update: if signedIn()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount'])
         && request.resource.data.commentCount == resource.data.commentCount + 1;
+
+      // 投稿者は本文だけ編集できる（#16）。editedAt はサーバー時刻
+      allow update: if signedIn()
+        && isPostOwner(postId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt'])
+        && isText(request.resource.data.text, 500)
+        && request.resource.data.editedAt == request.time;
 
       allow delete: if signedIn() && isPostOwner(postId);
 

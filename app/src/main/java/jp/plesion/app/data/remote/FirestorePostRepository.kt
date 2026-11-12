@@ -159,6 +159,14 @@ class FirestorePostRepository(
         }
     }
 
+    // 投稿者かどうかはセキュリティルールが確かめる（他人の投稿なら PERMISSION_DENIED で失敗する）
+    override suspend fun updatePost(postId: String, text: String): Result<Post> = runCatching {
+        validatePostText(text)
+        val post = posts.document(postId)
+        post.update(mapOf("text" to text, "editedAt" to FieldValue.serverTimestamp())).await()
+        post.get().await().toPost() ?: error("Post is malformed: $postId")
+    }
+
     // コメントのサブコレクションは投稿を消しても残るので、先に消してから投稿を消す
     // private/owner は投稿と同じバッチでしか消せない（セキュリティルール）
     // 画像は Storage のルールが投稿の持ち主を確かめるので、投稿を消す前に消す
@@ -278,6 +286,7 @@ private fun DocumentSnapshot.toPost(): Post? {
         createdAt = getTimestamp("createdAt", DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
             ?.toDate()?.time ?: return null,
         commentCount = getLong("commentCount")?.toInt() ?: 0,
+        editedAt = getTimestamp("editedAt", DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)?.toDate()?.time,
     )
 }
 

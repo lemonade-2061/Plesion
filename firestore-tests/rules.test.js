@@ -156,10 +156,24 @@ describe('posts', () => {
     await assertFails(setDoc(doc(alice(), 'posts', 'p1'), newPost({ isAdmin: true })));
   });
 
-  test('本文は誰も編集できない', async () => {
+  test('本文は投稿者だけが編集できる（editedAt はサーバー時刻）', async () => {
     await seedPost();
+    const edit = (db, overrides = {}) => updateDoc(doc(db, 'posts', 'p1'), { text: 'edited', editedAt: serverTimestamp(), ...overrides });
+    await assertFails(edit(bob()));
+    await assertFails(edit(alice(), { editedAt: Timestamp.now() }));
     await assertFails(updateDoc(doc(alice(), 'posts', 'p1'), { text: 'edited' }));
-    await assertFails(updateDoc(doc(bob(), 'posts', 'p1'), { text: 'edited' }));
+    await assertFails(edit(alice(), { text: ' ' }));
+    await assertFails(edit(alice(), { text: 'a'.repeat(501) }));
+    await assertSucceeds(edit(alice()));
+  });
+
+  test('本文以外は編集できない', async () => {
+    await seedPost();
+    const edit = (fields) => updateDoc(doc(alice(), 'posts', 'p1'), { text: 'edited', editedAt: serverTimestamp(), ...fields });
+    await assertFails(edit({ authorName: 'Mallory' }));
+    await assertFails(edit({ location: new GeoPoint(0, 0) }));
+    await assertFails(edit({ imageUrls: ['x'] }));
+    await assertFails(edit({ isAnonymous: true }));
   });
 
   test('commentCount は 1 ずつしか増やせない', async () => {
@@ -231,6 +245,13 @@ describe('anonymous posts', () => {
     await assertFails(getDocs(query(collectionGroup(bob(), 'private'), where('uid', '==', 'alice'), limit(100))));
     await assertFails(getDocs(query(collectionGroup(bob(), 'private'), limit(100))));
     await assertFails(getDocs(query(collectionGroup(alice(), 'private'), where('uid', '==', 'alice'), limit(101))));
+  });
+
+  test('匿名投稿の本文は、owner の本人だけが編集できる', async () => {
+    await seedAnonymousPost();
+    const edit = (db) => updateDoc(doc(db, 'posts', 'p1'), { text: 'edited', editedAt: serverTimestamp() });
+    await assertFails(edit(bob()));
+    await assertSucceeds(edit(alice()));
   });
 
   test('owner は本人しか読めない', async () => {
