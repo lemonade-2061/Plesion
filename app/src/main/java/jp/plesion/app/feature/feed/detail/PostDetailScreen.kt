@@ -23,19 +23,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.plesion.app.core.ui.UiState
 import jp.plesion.app.core.ui.UiStateContent
 import jp.plesion.app.data.model.Comment
+import jp.plesion.app.data.model.Post
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -69,6 +80,13 @@ fun PostDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val commentInput by viewModel.commentInput.collectAsStateWithLifecycle()
+    val postAction by viewModel.postAction.collectAsStateWithLifecycle()
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    // 削除できたら前の画面に戻る（ホーム・プロフィールは戻ったときに読み直す）
+    LaunchedEffect(postAction.isDeleted) {
+        if (postAction.isDeleted) onBack()
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -77,7 +95,18 @@ fun PostDetailScreen(
     ) {
         // キーボードが出たときに入力欄が隠れないよう、画面全体をキーボードの上に収める
         Column(Modifier.fillMaxSize().imePadding()) {
-            DetailTopBar(onBack = onBack)
+            DetailTopBar(
+                onBack = onBack,
+                showActions = postAction.isMine && !postAction.isWorking,
+                onEdit = viewModel::startEdit,
+                onDelete = { confirmDelete = true },
+            )
+            // 編集ダイアログの外で起きた失敗（削除の失敗）はここに出す
+            if (postAction.editingText == null) {
+                postAction.errorMessage?.let {
+                    Text(it, color = ErrorText, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                }
+            }
 
             // 上バーの下の残り全部を、読み込み中・エラー・一覧の表示に使う
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -95,7 +124,7 @@ fun PostDetailScreen(
                         item {
                             AuthorRow(
                                 name = post.authorName,
-                                time = formatDateTime(post.createdAt),
+                                time = formatDateTime(post.createdAt) + if (post.editedAt != null) "（編集済み）" else "",
                                 avatarSize = 48,
                             )
                             Column(
@@ -185,6 +214,73 @@ fun PostDetailScreen(
             }
         }
     }
+
+    postAction.editingText?.let { text ->
+        EditPostDialog(
+            text = text,
+            isSaving = postAction.isWorking,
+            errorMessage = postAction.errorMessage,
+            onTextChange = viewModel::onEditTextChange,
+            onSave = viewModel::saveEdit,
+            onCancel = viewModel::cancelEdit,
+        )
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("投稿を削除しますか？") },
+            text = { Text("コメントもすべて削除され、元に戻せません。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    viewModel.deletePost()
+                }) { Text("削除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("キャンセル") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun EditPostDialog(
+    text: String,
+    isSaving: Boolean,
+    errorMessage: String?,
+    onTextChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isSaving) onCancel() },
+        title = { Text("投稿を編集") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = onTextChange,
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                )
+                Text(
+                    "${text.length}/${Post.MAX_TEXT_LENGTH}文字",
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.End).padding(top = 4.dp),
+                )
+                errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onSave, enabled = !isSaving && text.isNotBlank()) {
+                Text(if (isSaving) "保存中…" else "保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel, enabled = !isSaving) { Text("キャンセル") }
+        },
+    )
 }
 
 @Composable
@@ -237,7 +333,12 @@ private fun CommentInputBar(
 }
 
 @Composable
-private fun DetailTopBar(onBack: () -> Unit) {
+private fun DetailTopBar(
+    onBack: () -> Unit,
+    showActions: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
     // 状態バーの余白は、PlesionNavHost の Scaffold がすでに取っているので、ここでは付けない
     Box(
         Modifier
@@ -263,6 +364,17 @@ private fun DetailTopBar(onBack: () -> Unit) {
             fontSize = 20.sp,
             modifier = Modifier.align(Alignment.Center),
         )
+        // 自分の投稿のときだけ、編集・削除を出す
+        if (showActions) {
+            Row(Modifier.align(Alignment.CenterEnd)) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = "編集", tint = Color.Black)
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "削除", tint = Color.Black)
+                }
+            }
+        }
     }
 }
 
