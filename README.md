@@ -4,13 +4,34 @@
 
 近くにいる人（半径1km以内）の投稿を見たり、自分の投稿を共有したりできる、位置情報ベースの Android 向け SNS アプリです。
 
-> **現在の状態:** 開発基盤のみ。画面は雛形で、データはすべて**仮データ（`[サンプル]` と表示）**です。Firebase には接続していません。
+## スクリーンショット
+
+| ホーム（近くの投稿） | 投稿詳細・コメント | 投稿作成 | プロフィール |
+|---|---|---|---|
+| <img src="docs/screenshots/home.jpg" width="200"> | <img src="docs/screenshots/detail.jpg" width="200"> | <img src="docs/screenshots/create.jpg" width="200"> | <img src="docs/screenshots/profile.jpg" width="200"> |
+
+## 主な機能
+
+- **Google ログイン**（Firebase Authentication）。設定画面からログアウトできる
+- **近くの投稿**: 現在地から半径 1km 以内・直近 24 時間の投稿をホームに表示（引っ張って更新）。上部に現在地の市区町村名を出す。距離は「100m以内」のようにぼかして出す
+- **投稿**: 本文（500 文字まで）と画像（4 枚まで、Photo Picker）。**匿名**でも投稿できる
+- **投稿詳細**: コメントの一覧と投稿。自分の投稿は**編集・削除**できる
+- **プロフィール**: 自分の投稿の一覧（匿名で出したものも含む）
+
+### プライバシーへの配慮
+
+- 投稿の位置は**丸めてから保存**し、正確な位置はどこにも残さない
+- 画像は圧縮時に**位置情報などの Exif を消して**からアップロードする
+- 匿名投稿には投稿者の uid を入れず、本人しか読めない場所に分けて保存する
+- 他人の uid で投稿を集めるクエリは、セキュリティルールとインデックスの設計で拒否する
+
+仕様の詳細は [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md)。
 
 ## 採用技術
 
 | 分類 | 技術 |
 |---|---|
-| 言語 | Kotlin 2.2.21 |
+| 言語 | Kotlin 2.3.21 |
 | UI | Jetpack Compose（BOM 2025.12.01）/ Material 3 |
 | 設計 | MVVM + Repository |
 | 画面遷移 | Navigation Compose 2.9.6 |
@@ -18,8 +39,11 @@
 | DI | 手動 DI（`di/AppContainer.kt`） |
 | ビルド | Gradle 8.13（Kotlin DSL）/ Android Gradle Plugin 8.13.2 |
 | SDK | minSdk 26 / compileSdk・targetSdk 36 |
-| バックエンド（予定） | Firebase Authentication（Google）/ Cloud Firestore / Cloud Storage / Cloud Messaging |
-| 位置情報（予定） | Fused Location Provider |
+| バックエンド | Firebase Authentication（Google、Credential Manager）/ Cloud Firestore / Cloud Storage（Firebase BoM 35.0.2） |
+| 1km 検索 | geohash の範囲クエリ + 距離での絞り込み |
+| 位置情報 | Fused Location Provider |
+| 画像表示 | Coil 2.7.0 |
+| テスト | JUnit（ViewModel・Repository）/ Compose UI テスト / Firebase Emulator（セキュリティルール） |
 
 バージョンは `gradle/libs.versions.toml` で一元管理しています。
 
@@ -33,7 +57,9 @@
    cd Plesion
    ```
 4. Android Studio で `Plesion` フォルダを **Open** → Gradle Sync が自動で走ります。
-5. Gradle の JDK は Android Studio 同梱の JDK（JBR 21）を使ってください（Settings → Build Tools → Gradle → Gradle JDK）。
+5. Firebase に接続するには `google-services.json` を `app/` に置く（[docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)）。PC ごとに SHA-1 の登録が必要です。
+   - **置かなくてもビルド・起動できます。** そのときは `data/local/` の Fake 実装（仮データ）で動きます（CI もこの状態）。
+6. Gradle の JDK は Android Studio 同梱の JDK（JBR 21）を使ってください（Settings → Build Tools → Gradle → Gradle JDK）。
    - ⚠️ JDK 25 など新しすぎる JDK では Gradle 8.13 が動きません。
 
 ## ビルド・起動手順
@@ -46,9 +72,11 @@
   ./gradlew installDebug         # 接続中の端末にインストール
   ./gradlew testDebugUnitTest    # 単体テスト
   ./gradlew lintDebug            # 静的チェック
+  ./gradlew connectedDebugAndroidTest  # UI テスト（エミュレータか実機が必要）
   ```
+- セキュリティルールのテスト: [firestore-tests/README.md](firestore-tests/README.md)（Node.js と Firebase CLI が必要）
 
-起動すると「サンプルユーザーでログイン（仮）」→ ホーム / 投稿 / プロフィール（→ 設定）を行き来できます。
+起動すると Google ログイン → ホーム / 投稿 / プロフィール（→ 設定）を行き来できます。位置情報の許可が必要です。
 
 ## ディレクトリ構成
 
@@ -60,19 +88,24 @@ app/src/main/java/jp/plesion/app/
 ├── navigation/              … ルート定義と NavHost（共通ファイル）
 ├── feature/                 … 画面ごとのフォルダ（Screen + ViewModel）
 │   ├── auth/                … ログイン
-│   ├── feed/                … ホーム・タイムライン
+│   ├── feed/                … ホーム・タイムライン（detail/ … 投稿詳細・コメント）
 │   ├── post/                … 投稿作成
 │   ├── profile/             … プロフィール
 │   └── settings/            … 設定
 ├── data/
 │   ├── model/               … Post, User, Comment, GeoPoint
 │   ├── repository/          … Repository インターフェース（共通ファイル）
-│   ├── local/               … 仮データと Fake 実装
-│   └── remote/              … Firebase 実装（これから）
+│   ├── local/               … 仮データと Fake 実装（google-services.json がないとき用）
+│   └── remote/              … Firebase 実装（Auth・Firestore・Storage）
 ├── core/
-│   ├── ui/                  … テーマ・UiState・ローディング/エラー表示
-│   └── location/            … 位置情報取得の窓口
+│   ├── ui/                  … テーマ・UiState・ローディング/エラー表示・位置情報の許可
+│   ├── location/            … 現在地の取得・位置の丸め・距離計算
+│   └── image/               … 画像の縮小・Exif の削除
 └── di/AppContainer.kt       … 依存関係の組み立て（共通ファイル）
+
+firestore.rules / storage.rules   … セキュリティルール
+firestore.indexes.json            … Firestore のインデックス
+firestore-tests/                  … ルールのテスト（Firebase Emulator）
 ```
 
 詳しくは [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
@@ -99,23 +132,12 @@ app/src/main/java/jp/plesion/app/
 
 詳しくは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
-## Firebase 接続前にできること
+## 未実装・今後の課題
 
-- 画面の UI 実装（仮データで表示確認できます）
-- ViewModel の状態管理と単体テスト（Fake Repository を使う）
-- 画面遷移の追加
-- データモデル・Repository インターフェースの相談・調整
-
-Fake 実装は `data/local/` にあり、`di/AppContainer.kt` で本番実装に差し替えます。接続手順は [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)、Android と Firebase の約束事（投稿の項目・1km 検索の分担・匿名投稿）は [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md)。
-
-## 未実装機能
-
-- Firebase 接続（Auth / Firestore / Storage / FCM）
-- Google ログイン（現在は仮ログインボタン）
-- 位置情報の取得と 1km 以内の検索
-- 投稿の保存（現在はメモリ上のみ。再起動で消える）
-- 画像添付、投稿編集・削除 UI、投稿詳細画面、コメント UI
-- 通知
-- アプリアイコン、正式なデザイン
+- プッシュ通知（FCM）。ホーム右上のベルは押しても何も起きない
+- プロフィールの編集（名前・アイコンの変更）
+- いいね・リポスト（ボタンの見た目だけある）
+- エリアの切り替え（ホーム上部には現在地の市区町村名だけを出す）
+- ホームの投稿カードのアバターが「アイコン」の文字のまま
 
 スケジュールは [docs/ROADMAP.md](docs/ROADMAP.md)。
