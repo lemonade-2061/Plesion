@@ -2,7 +2,6 @@ package jp.plesion.app.feature.feed.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,9 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -146,36 +143,19 @@ fun PostDetailScreen(
                                     PostImages(post.imageUrls)
                                 }
                                 Spacer(Modifier.height(12.dp))
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    // コメント（件数つき）
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.Email,
-                                            contentDescription = "コメント",
-                                            tint = Color.White,
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(
-                                            detail.comments.size.toString(),
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp,
-                                        )
-                                    }
-                                    // リポスト・いいねは見た目だけ
+                                // コメント（件数つき）
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        Icons.Default.Refresh,
-                                        contentDescription = "リポスト",
+                                        Icons.Default.Email,
+                                        contentDescription = "コメント",
                                         tint = Color.White,
                                     )
-                                    Icon(
-                                        Icons.Default.FavoriteBorder,
-                                        contentDescription = "いいね",
-                                        tint = Color.White,
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        detail.comments.size.toString(),
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
                                     )
                                 }
                             }

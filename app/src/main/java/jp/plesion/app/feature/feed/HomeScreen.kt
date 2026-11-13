@@ -2,7 +2,6 @@ package jp.plesion.app.feature.feed
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,10 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -188,25 +185,16 @@ private fun PostBubble(post: FeedPost) {
             PostImages(post.imageUrls)
         }
         Spacer(Modifier.height(12.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // コメント（件数つき）
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Email, contentDescription = "コメント", tint = Color.White)
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    post.commentCount.toString(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                )
-            }
-            // リポスト・いいねは見た目だけ
-            Icon(Icons.Default.Refresh, contentDescription = "リポスト", tint = Color.White)
-            Icon(Icons.Default.FavoriteBorder, contentDescription = "いいね", tint = Color.White)
+        // コメント（件数つき）
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Email, contentDescription = "コメント", tint = Color.White)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                post.commentCount.toString(),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+            )
         }
     }
 }
