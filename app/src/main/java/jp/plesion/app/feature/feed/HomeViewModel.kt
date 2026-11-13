@@ -2,6 +2,7 @@ package jp.plesion.app.feature.feed
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import jp.plesion.app.core.location.AreaNameProvider
 import jp.plesion.app.core.location.GeoUtils
 import jp.plesion.app.core.location.LocationProvider
 import jp.plesion.app.core.location.toLocationErrorMessage
@@ -32,12 +33,17 @@ data class FeedPost(
 class HomeViewModel(
     private val postRepository: PostRepository,
     private val locationProvider: LocationProvider,
+    private val areaNameProvider: AreaNameProvider = AreaNameProvider { null },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<UiState<List<FeedPost>>>(UiState.Loading)
     val uiState: StateFlow<UiState<List<FeedPost>>> = _uiState.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    /** ホーム上部に出す現在地のエリア名。まだ分からなければ null。 */
+    private val _areaName = MutableStateFlow<String?>(null)
+    val areaName: StateFlow<String?> = _areaName.asStateFlow()
 
     private var loadJob: Job? = null
     private var rerunRequested = false
@@ -66,6 +72,10 @@ class HomeViewModel(
     private suspend fun loadNearbyPosts(): UiState<List<FeedPost>> {
         val center = locationProvider.getCurrentLocation()
             .getOrElse { return UiState.Error(it.toLocationErrorMessage()) }
+        // エリア名は一覧の表示を待たせないよう別に求める。求められなければ前の名前を残す
+        viewModelScope.launch {
+            areaNameProvider.getAreaName(center)?.let { _areaName.value = it }
+        }
         return postRepository.getNearbyPosts(center, NEARBY_RADIUS_METERS).fold(
             onSuccess = { posts ->
                 UiState.Success(

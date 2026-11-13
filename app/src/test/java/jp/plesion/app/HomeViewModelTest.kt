@@ -1,5 +1,6 @@
 package jp.plesion.app
 
+import jp.plesion.app.core.location.AreaNameProvider
 import jp.plesion.app.core.location.LocationPermissionDeniedException
 import jp.plesion.app.core.location.LocationUnavailableException
 import jp.plesion.app.core.ui.UiState
@@ -192,6 +193,30 @@ class HomeViewModelTest {
         viewModel.refresh()
 
         assertEquals(created.id, viewModel.posts().first().id)
+    }
+
+    @Test
+    fun refresh_showsAreaNameOfCurrentLocation() {
+        val asked = mutableListOf<GeoPoint>()
+        val viewModel = HomeViewModel(TestPostRepository(), TestLocationProvider(), AreaNameProvider { asked += it; "千代田区" })
+        assertEquals(null, viewModel.areaName.value)
+
+        viewModel.refresh()
+
+        assertEquals("千代田区", viewModel.areaName.value)
+        assertEquals(listOf(TOKYO_STATION), asked)
+    }
+
+    @Test
+    fun refresh_areaNameUnknown_keepsPreviousName() {
+        var name: String? = "千代田区"
+        val viewModel = HomeViewModel(TestPostRepository(), TestLocationProvider(), AreaNameProvider { name })
+        viewModel.refresh()
+
+        name = null
+        viewModel.refresh()
+
+        assertEquals("千代田区", viewModel.areaName.value)
     }
 
     @Test
