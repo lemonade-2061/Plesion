@@ -27,6 +27,69 @@
 
 仕様の詳細は [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md)。
 
+## システム構成
+
+```mermaid
+flowchart LR
+    subgraph app["Android アプリ"]
+        direction TB
+        UI["Screen<br/>(Jetpack Compose)"] -- 操作 --> VM["ViewModel"]
+        VM -- "UiState (StateFlow)" --> UI
+        VM --> Repo["Repository<br/>(インターフェース)"]
+        VM --> Loc["core/location<br/>現在地・エリア名"]
+        Repo --> Remote["data/remote<br/>Firebase 実装"]
+        Repo -. "google-services.json<br/>がないとき" .-> Fake["data/local<br/>Fake 実装"]
+        Remote --> Img["core/image<br/>縮小・Exif 削除"]
+        DI["AppContainer<br/>(手動 DI)"] -. 組み立て .-> VM
+    end
+
+    subgraph firebase["Firebase"]
+        direction TB
+        Auth["Authentication<br/>(Google)"]
+        FS[("Cloud Firestore<br/>posts / comments<br/>private/owner / users")]
+        ST[("Cloud Storage<br/>posts/{postId}/images")]
+        Rules{{"セキュリティルール<br/>firestore.rules / storage.rules"}}
+    end
+
+    subgraph device["端末・Google Play 開発者サービス"]
+        GPS["Fused Location Provider"]
+        Geo["Geocoder"]
+        CM["Credential Manager<br/>(Google アカウント選択)"]
+    end
+
+    Loc --> GPS
+    Loc --> Geo
+    Remote --> CM
+    Remote --> Auth
+    Remote --> FS
+    Remote --> ST
+    Rules -. 守る .- FS
+    Rules -. 守る .- ST
+```
+
+### 近くの投稿を表示する流れ
+
+```mermaid
+sequenceDiagram
+    actor U as ユーザー
+    participant H as HomeScreen / HomeViewModel
+    participant L as FusedLocationProvider
+    participant R as FirestorePostRepository
+    participant F as Cloud Firestore
+
+    U->>H: ホームを開く・引っ張って更新
+    H->>L: 現在地を取得
+    L-->>H: 緯度・経度
+    H->>R: getNearbyPosts(現在地, 1km)
+    R->>F: 1km を覆う geohash の範囲ごとにクエリ<br/>(直近 24 時間・各 100 件まで)
+    F-->>R: 候補の投稿（ルールで geohash 順のクエリだけ許可）
+    R->>R: 距離を計算して 1km 以内に絞る
+    R-->>H: 投稿の一覧
+    H-->>U: 新しい順に表示（距離は「100m以内」などの段階で表示）
+```
+
+アプリ内の層の分け方は [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)、Firestore・Storage に保存する項目は [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md)。
+
 ## 採用技術
 
 | 分類 | 技術 |
