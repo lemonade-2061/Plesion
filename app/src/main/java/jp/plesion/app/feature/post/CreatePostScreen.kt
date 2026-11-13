@@ -63,14 +63,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import jp.plesion.app.core.ui.LocationPermissionGate
+import jp.plesion.app.core.ui.theme.Accent
+import jp.plesion.app.core.ui.theme.AccentDark
+import jp.plesion.app.core.ui.theme.AvatarPurple
+import jp.plesion.app.core.ui.theme.BgPurple
+import jp.plesion.app.core.ui.theme.CardPurple
+import jp.plesion.app.core.ui.theme.ErrorText
 import jp.plesion.app.data.model.Post
-
-private val BgPurple = Color(0xFF42145F)
-private val CardPurple = Color(0xFFA060B0)
-private val AvatarPurple = Color(0xFF7B3A8C)
-private val Accent = Color(0xFFC72FE0)
-private val AccentDark = Color(0xFF9B1FC0)
-private val ErrorText = Color(0xFFFFB4AB)
 
 /**
  * カテゴリー・終了日時は、保存先（PostRepository.createPost）がまだ対応していない。

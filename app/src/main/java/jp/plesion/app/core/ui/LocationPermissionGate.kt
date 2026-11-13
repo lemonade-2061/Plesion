@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,7 +119,11 @@ private fun LocationGuide(
         Text(text = message, textAlign = TextAlign.Center)
         Button(onClick = onPrimary) { Text(primaryLabel) }
         if (onOpenAppSettings != null) {
-            OutlinedButton(onClick = onOpenAppSettings) { Text("アプリの設定を開く") }
+            // 強調色の文字は紫の背景だと読みにくいので、文字は背景に合わせた色にする
+            OutlinedButton(
+                onClick = onOpenAppSettings,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground),
+            ) { Text("アプリの設定を開く") }
         }
     }
 }

@@ -32,12 +32,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import jp.plesion.app.core.ui.theme.Accent
+import jp.plesion.app.core.ui.theme.AccentDark
+import jp.plesion.app.core.ui.theme.BgPurple
+import jp.plesion.app.core.ui.theme.ErrorText
 import jp.plesion.app.data.repository.GoogleIdTokenProvider
-
-private val BgPurple = Color(0xFF42145F)
-private val Accent = Color(0xFFC72FE0)
-private val AccentDark = Color(0xFF9B1FC0)
-private val ErrorText = Color(0xFFFFB4AB)
 
 @Composable
 fun LoginScreen(

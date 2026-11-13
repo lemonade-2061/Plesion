@@ -36,10 +36,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
-private val BgPurple = Color(0xFF42145F)
-private val CardPurple = Color(0xFFA060B0)
-private val Accent = Color(0xFFC72FE0)
+import jp.plesion.app.core.ui.theme.Accent
+import jp.plesion.app.core.ui.theme.BgPurple
+import jp.plesion.app.core.ui.theme.CardPurple
 
 @Composable
 fun SettingsScreen(
