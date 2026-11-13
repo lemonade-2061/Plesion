@@ -98,7 +98,7 @@ fun PlesionNavHost(
             composable(Routes.HOME) { entry ->
                 HomeScreen(
                     viewModel = viewModel(factory = viewModelFactory {
-                        initializer { HomeViewModel(container.postRepository, container.locationProvider) }
+                        initializer { HomeViewModel(container.postRepository, container.locationProvider, container.areaNameProvider) }
                     }),
                     onPostClick = { postId ->
                         // 連打や遷移アニメーション中のタップで詳細が二重に積まれないようにする

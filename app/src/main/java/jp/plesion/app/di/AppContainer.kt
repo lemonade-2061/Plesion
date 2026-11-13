@@ -3,7 +3,9 @@ package jp.plesion.app.di
 import android.annotation.SuppressLint
 import android.content.Context
 import jp.plesion.app.core.image.AndroidImageCompressor
+import jp.plesion.app.core.location.AreaNameProvider
 import jp.plesion.app.core.location.FusedLocationProvider
+import jp.plesion.app.core.location.GeocoderAreaNameProvider
 import jp.plesion.app.core.location.LocationProvider
 import jp.plesion.app.data.local.FakeAuthRepository
 import jp.plesion.app.data.local.FakeGoogleIdTokenProvider
@@ -40,6 +42,8 @@ class AppContainer(context: Context) {
 
     /** 権限がなければ Result.failure を返す。権限リクエストは各画面で行う。 */
     val locationProvider: LocationProvider = FusedLocationProvider(context.applicationContext)
+
+    val areaNameProvider: AreaNameProvider = GeocoderAreaNameProvider(context.applicationContext)
 }
 
 /**
