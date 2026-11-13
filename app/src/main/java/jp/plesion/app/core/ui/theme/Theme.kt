@@ -1,5 +1,7 @@
 package jp.plesion.app.core.ui.theme
 
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -36,6 +38,10 @@ private val PlesionColors = darkColorScheme(
     outline = CardPurple,
     outlineVariant = AvatarPurple,
 )
+
+/** ダイアログの TextButton 用。標準の primary（Accent）はダイアログの面の上だと読みにくいので明るくする。 */
+@Composable
+fun dialogButtonColors(): ButtonColors = ButtonDefaults.textButtonColors(contentColor = AccentLight)
 
 @Composable
 fun PlesionTheme(content: @Composable () -> Unit) {

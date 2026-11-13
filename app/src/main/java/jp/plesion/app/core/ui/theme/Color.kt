@@ -16,6 +16,9 @@ val AvatarPurple = Color(0xFF7B3A8C)
 /** 強調色（主ボタン・選択中・区切り線）。 */
 val Accent = Color(0xFFC72FE0)
 
+/** ダイアログのボタンなど、少し明るい面の上に置く強調色の文字。Accent だと暗くて読みにくい。 */
+val AccentLight = Color(0xFFF0B8FF)
+
 /** 主ボタンのグラデーションの終わり側。 */
 val AccentDark = Color(0xFF9B1FC0)
 
