@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 画面の見た目は Compose 側の PlesionTheme で定義する。ここは起動時のウィンドウ用。 -->
-    <style name="Theme.Plesion" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Plesion" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- 起動直後に白い画面が一瞬出ないよう、Compose の背景（BgPurple）と同じ色にしておく -->
+        <item name="android:windowBackground">#FF42145F</item>
+    </style>
 </resources>

@@ -56,17 +56,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.plesion.app.core.ui.PostImages
 import jp.plesion.app.core.ui.UiState
 import jp.plesion.app.core.ui.UiStateContent
+import jp.plesion.app.core.ui.theme.AvatarPurple
+import jp.plesion.app.core.ui.theme.BgPurple
+import jp.plesion.app.core.ui.theme.CardPurple
+import jp.plesion.app.core.ui.theme.CommentGray
+import jp.plesion.app.core.ui.theme.ErrorText
+import jp.plesion.app.core.ui.theme.dialogButtonColors
 import jp.plesion.app.data.model.Comment
 import jp.plesion.app.data.model.Post
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
-private val BgPurple = Color(0xFF42145F)
-private val CardPurple = Color(0xFFA060B0)
-private val AvatarPurple = Color(0xFF7B3A8C)
-private val CommentGray = Color(0xFFD9D9D9)
-private val ErrorText = Color(0xFFFFB4AB)
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")
 
@@ -237,13 +237,16 @@ fun PostDetailScreen(
             title = { Text("投稿を削除しますか？") },
             text = { Text("コメントもすべて削除され、元に戻せません。") },
             confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
-                    viewModel.deletePost()
-                }) { Text("削除") }
+                TextButton(
+                    onClick = {
+                        confirmDelete = false
+                        viewModel.deletePost()
+                    },
+                    colors = dialogButtonColors(),
+                ) { Text("削除") }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("キャンセル") }
+                TextButton(onClick = { confirmDelete = false }, colors = dialogButtonColors()) { Text("キャンセル") }
             },
         )
     }
@@ -278,12 +281,12 @@ private fun EditPostDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onSave, enabled = !isSaving && text.isNotBlank()) {
+            TextButton(onClick = onSave, enabled = !isSaving && text.isNotBlank(), colors = dialogButtonColors()) {
                 Text(if (isSaving) "保存中…" else "保存")
             }
         },
         dismissButton = {
-            TextButton(onClick = onCancel, enabled = !isSaving) { Text("キャンセル") }
+            TextButton(onClick = onCancel, enabled = !isSaving, colors = dialogButtonColors()) { Text("キャンセル") }
         },
     )
 }

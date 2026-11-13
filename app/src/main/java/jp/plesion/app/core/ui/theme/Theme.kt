@@ -1,40 +1,49 @@
 package jp.plesion.app.core.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
-// ブランドカラーは仮。デザインが決まったら tanabe が差し替える。
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF3A6A4F),
-    secondary = Color(0xFF4F6354),
+/**
+ * 紫を基調にした 1 種類の配色。各画面が紫の背景で作られているので、端末のダークモードでは切り替えない。
+ * 共通部品（ローディング・エラー・位置情報の案内）やダイアログ・ナビゲーションバーもこの配色で表示される。
+ */
+private val PlesionColors = darkColorScheme(
+    primary = Accent,
+    onPrimary = Color.White,
+    primaryContainer = AccentDark,
+    onPrimaryContainer = Color.White,
+    secondary = CardPurple,
+    onSecondary = Color.White,
+    secondaryContainer = AvatarPurple,
+    onSecondaryContainer = Color.White,
+    tertiary = CardPurple,
+    onTertiary = Color.White,
+    background = BgPurple,
+    onBackground = Color.White,
+    surface = BgPurple,
+    onSurface = Color.White,
+    surfaceVariant = AvatarPurple,
+    onSurfaceVariant = Color(0xFFE6D2EC),
+    surfaceContainerLowest = SurfaceContainerLowest,
+    surfaceContainerLow = SurfaceContainerLow,
+    surfaceContainer = SurfaceContainer,
+    surfaceContainerHigh = SurfaceContainerHigh,
+    surfaceContainerHighest = SurfaceContainerHighest,
+    error = ErrorText,
+    onError = Color(0xFF690005),
+    outline = CardPurple,
+    outlineVariant = AvatarPurple,
 )
 
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFF9FD4B2),
-    secondary = Color(0xFFB6CCB9),
-)
+/** ダイアログの TextButton 用。標準の primary（Accent）はダイアログの面の上だと読みにくいので明るくする。 */
+@Composable
+fun dialogButtonColors(): ButtonColors = ButtonDefaults.textButtonColors(contentColor = AccentLight)
 
 @Composable
-fun PlesionTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColors
-        else -> LightColors
-    }
-    MaterialTheme(colorScheme = colorScheme, content = content)
+fun PlesionTheme(content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = PlesionColors, content = content)
 }

@@ -28,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -44,11 +45,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import jp.plesion.app.core.ui.LocationPermissionGate
 import jp.plesion.app.core.ui.PostImages
 import jp.plesion.app.core.ui.UiStateContent
-import androidx.compose.material3.Surface
-
-private val BgPurple = Color(0xFF42145F)
-private val CardPurple = Color(0xFFA060B0)
-private val AvatarPurple = Color(0xFF7B3A8C)
+import jp.plesion.app.core.ui.theme.AvatarPurple
+import jp.plesion.app.core.ui.theme.BgPurple
+import jp.plesion.app.core.ui.theme.CardPurple
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
